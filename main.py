@@ -6,6 +6,18 @@ import matplotlib.ticker as ticker
 import os
 import re
 
+# Set publication-quality matplotlib parameters
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams['savefig.dpi'] = 300
+plt.rcParams['font.size'] = 10
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['axes.linewidth'] = 1.0
+plt.rcParams['lines.linewidth'] = 1.0
+plt.rcParams['xtick.major.width'] = 0.8
+plt.rcParams['ytick.major.width'] = 0.8
+plt.rcParams['xtick.minor.width'] = 0.5
+plt.rcParams['ytick.minor.width'] = 0.5
+
 def get_file_paths():
     """Opens a file dialog to select one or more NMR data files."""
     root = tk.Tk()
@@ -52,16 +64,17 @@ if not file_paths:
     exit()
 
 num_files = len(file_paths)
-fig, axes = plt.subplots(num_files, 1, figsize=(6, 3 * num_files), sharex=True)
 
-# Ensure axes is iterable
-if num_files == 1:
-    axes = [axes]
+# Create single figure instead of subplots
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# Generate color gradient
+colors = plt.cm.viridis(np.linspace(0, 1, num_files))
 
 # Set up formatter once instead of per plot
 formatter = ticker.ScalarFormatter(useMathText=True)
 
-for ax, file_path in zip(axes, file_paths):
+for idx, (color, file_path) in enumerate(zip(colors, file_paths)):
     try:
         x_values, y_values = readNMR(file_path)
 
@@ -71,18 +84,21 @@ for ax, file_path in zip(axes, file_paths):
             y_values = y_values[::-1]
 
         filename = os.path.basename(file_path)
-        ax.plot(x_values, y_values, linewidth=2, label=filename)
-        ax.set_ylabel("Intensity")
-        ax.legend()
-        ax.invert_xaxis()  # Invert for display
-        ax.yaxis.set_major_formatter(formatter)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        ax.plot(x_values, y_values, linewidth=0.8, label=filename, color=color)
     
     except ValueError as e:
         print(f"Warning: {e}")
-        ax.text(0.5, 0.5, str(e), ha='center', va='center', transform=ax.transAxes)
 
-axes[-1].set_xlabel("ppm")
-fig.suptitle("NMR Spectra", fontsize=14)
-plt.tight_layout(rect=[0, 0, 1, 0.96])
+ax.set_xlabel("ppm", fontsize=10)
+ax.set_ylabel("Intensity", fontsize=10)
+ax.legend(fontsize=9, frameon=False, loc='upper right')
+ax.invert_xaxis()  # Invert for display
+ax.yaxis.set_major_formatter(formatter)
+ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+ax.tick_params(axis='both', which='major', labelsize=9)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+
+fig.suptitle("NMR Spectra", fontsize=12, y=0.995)
+plt.tight_layout(rect=[0, 0, 1, 0.99])
 plt.show()
