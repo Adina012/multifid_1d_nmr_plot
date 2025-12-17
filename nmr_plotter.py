@@ -6,7 +6,66 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import os
+import io
+from PIL import Image
 from nmr_reader import readNMR
+
+
+def copy_figure_to_clipboard(fig):
+    """
+    Copy the current figure to clipboard.
+    
+    Parameters:
+    -----------
+    fig : matplotlib.figure.Figure
+        The figure to copy to clipboard
+    """
+    try:
+        # Save figure to a BytesIO buffer
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', dpi=300, bbox_inches='tight')
+        buf.seek(0)
+        
+        # Load image from buffer and copy to clipboard
+        img = Image.open(buf)
+        
+        # Copy to clipboard using PIL
+        import platform
+        if platform.system() == 'Darwin':  # macOS
+            import subprocess
+            # Save to temporary file and use pbcopy
+            temp_path = '/tmp/nmr_plot_temp.png'
+            img.save(temp_path, 'PNG')
+            subprocess.run(['osascript', '-e', f'set the clipboard to (read (POSIX file "{temp_path}") as «class PNGf»)'], check=True)
+            os.remove(temp_path)
+            print("Figure copied to clipboard!")
+        elif platform.system() == 'Windows':
+            import win32clipboard
+            from io import BytesIO
+            output = BytesIO()
+            img.convert('RGB').save(output, 'BMP')
+            data = output.getvalue()[14:]  # Remove BMP header
+            output.close()
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+            win32clipboard.CloseClipboard()
+            print("Figure copied to clipboard!")
+        else:  # Linux
+            import subprocess
+            temp_path = '/tmp/nmr_plot_temp.png'
+            img.save(temp_path, 'PNG')
+            subprocess.run(['xclip', '-selection', 'clipboard', '-t', 'image/png', '-i', temp_path], check=True)
+            os.remove(temp_path)
+            print("Figure copied to clipboard!")
+        
+        buf.close()
+    except Exception as e:
+        print(f"Error copying to clipboard: {e}")
+        print("You may need to install additional dependencies:")
+        print("  macOS: No additional dependencies needed")
+        print("  Windows: pip install pywin32")
+        print("  Linux: sudo apt-get install xclip (or xsel)")
 
 
 def set_plot_quality(quality='publication'):
@@ -87,6 +146,13 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         
         fig.suptitle("NMR Spectra", fontsize=12, y=0.995)
         plt.tight_layout(rect=[0, 0, 1, 0.99])
+        
+        # Add key press event handler for clipboard copy
+        def on_key(event):
+            if event.key == 'c':
+                copy_figure_to_clipboard(fig)
+        
+        fig.canvas.mpl_connect('key_press_event', on_key)
         plt.show()
     
     else:  # single mode
@@ -118,6 +184,13 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
                 ax.spines['right'].set_visible(False)
                 
                 plt.tight_layout()
+                
+                # Add key press event handler for clipboard copy
+                def on_key(event):
+                    if event.key == 'c':
+                        copy_figure_to_clipboard(fig)
+                
+                fig.canvas.mpl_connect('key_press_event', on_key)
                 plt.show()
             
             except ValueError as e:
