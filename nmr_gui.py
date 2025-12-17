@@ -104,23 +104,28 @@ class NMRPlotterGUI:
                        variable=self.quality_mode, value="preview").grid(row=1, column=0, sticky=tk.W, pady=5)
         
         # X-Axis Limits Section
-        xlim_frame = ttk.LabelFrame(main_frame, text="X-Axis Limits (ppm)", padding="15")
+        xlim_frame = ttk.LabelFrame(main_frame, text="X-Axis Limits (ppm) - Zoom to Region", padding="15")
         xlim_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
         
         self.use_custom_limits = tk.BooleanVar(value=False)
-        ttk.Checkbutton(xlim_frame, text="Use custom limits", 
+        ttk.Checkbutton(xlim_frame, text="Enable zoom (only plot selected region)", 
                        variable=self.use_custom_limits, 
-                       command=self.toggle_limits).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=8)
+                       command=self.toggle_limits).grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=8)
         
-        ttk.Label(xlim_frame, text="Maximum (left):").grid(row=1, column=0, sticky=tk.W, padx=(25, 10), pady=8)
-        self.x_max_entry = ttk.Entry(xlim_frame, width=18, state="disabled")
+        ttk.Label(xlim_frame, text="From (high ppm):").grid(row=1, column=0, sticky=tk.W, padx=(25, 10), pady=8)
+        self.x_max_entry = ttk.Entry(xlim_frame, width=15, state="disabled")
         self.x_max_entry.grid(row=1, column=1, sticky=tk.W, pady=8)
-        self.x_max_entry.insert(0, "15")
+        self.x_max_entry.insert(0, "200")
         
-        ttk.Label(xlim_frame, text="Minimum (right):").grid(row=2, column=0, sticky=tk.W, padx=(25, 10), pady=8)
-        self.x_min_entry = ttk.Entry(xlim_frame, width=18, state="disabled")
+        ttk.Label(xlim_frame, text="To (low ppm):").grid(row=2, column=0, sticky=tk.W, padx=(25, 10), pady=8)
+        self.x_min_entry = ttk.Entry(xlim_frame, width=15, state="disabled")
         self.x_min_entry.grid(row=2, column=1, sticky=tk.W, pady=8)
-        self.x_min_entry.insert(0, "-5")
+        self.x_min_entry.insert(0, "-100")
+        
+        # Help text
+        help_label = ttk.Label(xlim_frame, text="💡 Tip: Only data within this range will be plotted", 
+                              font=("Helvetica", 8, "italic"))
+        help_label.grid(row=3, column=0, columnspan=3, sticky=tk.W, padx=(25, 0), pady=(5, 0))
         
         # Plot Button
         plot_button = ttk.Button(main_frame, text="📊 Plot Spectra", command=self.plot_spectra, width=35)

@@ -36,7 +36,18 @@ def set_plot_quality(quality='publication'):
 
 
 def plot_nmr_data(file_paths, plot_mode, x_limits=None):
-    """Plot NMR data according to specified parameters."""
+    """
+    Plot NMR data according to specified parameters.
+    
+    Parameters:
+    -----------
+    file_paths : list of str
+        Paths to NMR data files
+    plot_mode : str
+        'multiple' for all spectra on same figure, 'single' for separate figures
+    x_limits : tuple of (float, float), optional
+        X-axis limits as (x_max, x_min) in ppm. Data will be filtered to this range.
+    """
     num_files = len(file_paths)
     formatter = ticker.ScalarFormatter(useMathText=True)
     
@@ -49,10 +60,11 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         
         for idx, (color, file_path) in enumerate(zip(colors, file_paths)):
             try:
-                x_values, y_values = readNMR(file_path)
+                # Pass x_limits to readNMR so it filters the data
+                x_values, y_values = readNMR(file_path, x_limits=x_limits)
                 
                 # Reverse if needed to ensure decreasing order (NMR standard)
-                if x_values[0] < x_values[-1]:
+                if len(x_values) > 0 and x_values[0] < x_values[-1]:
                     x_values = x_values[::-1]
                     y_values = y_values[::-1]
                 
@@ -66,10 +78,6 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         ax.set_ylabel("Intensity", fontsize=10)
         ax.legend(fontsize=9, frameon=False, loc='upper right')
         ax.invert_xaxis()
-        
-        # Apply custom x-axis limits if provided
-        if x_limits:
-            ax.set_xlim(x_limits)
         
         ax.yaxis.set_major_formatter(formatter)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
@@ -85,10 +93,11 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         # Plot each spectrum in a separate figure
         for file_path in file_paths:
             try:
-                x_values, y_values = readNMR(file_path)
+                # Pass x_limits to readNMR so it filters the data
+                x_values, y_values = readNMR(file_path, x_limits=x_limits)
                 
                 # Reverse if needed to ensure decreasing order (NMR standard)
-                if x_values[0] < x_values[-1]:
+                if len(x_values) > 0 and x_values[0] < x_values[-1]:
                     x_values = x_values[::-1]
                     y_values = y_values[::-1]
                 
@@ -101,10 +110,6 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
                 ax.set_ylabel("Intensity", fontsize=10)
                 ax.set_title(filename, fontsize=12)
                 ax.invert_xaxis()
-                
-                # Apply custom x-axis limits if provided
-                if x_limits:
-                    ax.set_xlim(x_limits)
                 
                 ax.yaxis.set_major_formatter(formatter)
                 ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
