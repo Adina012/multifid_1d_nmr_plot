@@ -40,17 +40,20 @@ def copy_figure_to_clipboard(fig):
             os.remove(temp_path)
             print("Figure copied to clipboard!")
         elif platform.system() == 'Windows':
-            import win32clipboard
-            from io import BytesIO
-            output = BytesIO()
-            img.convert('RGB').save(output, 'BMP')
-            data = output.getvalue()[14:]  # Remove BMP header
-            output.close()
-            win32clipboard.OpenClipboard()
-            win32clipboard.EmptyClipboard()
-            win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
-            win32clipboard.CloseClipboard()
-            print("Figure copied to clipboard!")
+            try:
+                import win32clipboard  # type: ignore
+                from io import BytesIO
+                output = BytesIO()
+                img.convert('RGB').save(output, 'BMP')
+                data = output.getvalue()[14:]  # Remove BMP header
+                output.close()
+                win32clipboard.OpenClipboard()
+                win32clipboard.EmptyClipboard()
+                win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+                win32clipboard.CloseClipboard()
+                print("Figure copied to clipboard!")
+            except ImportError:
+                print("Windows clipboard support requires: pip install pywin32")
         else:  # Linux
             import subprocess
             temp_path = '/tmp/nmr_plot_temp.png'
