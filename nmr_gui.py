@@ -1,40 +1,14 @@
 """
-NMR Spectra Plotter - Main Application
-A GUI-based tool for plotting 1D NMR spectra with customizable options.
-
-Author: Adina
-Date: December 2025
+NMR GUI Module
+Provides the graphical user interface for NMR plotting.
 """
 import tkinter as tk
-from nmr_gui import NMRPlotterGUI
-
-def main():
-    """Launch the NMR Plotter GUI application."""
-    root = tk.Tk()
-    app = NMRPlotterGUI(root)
-    root.mainloop()
-
-if __name__ == "__main__":
-    main()
-
-
-# ==================== OLD CODE BELOW (kept for reference) ====================
-# The code has been refactored into separate modules:
-# - nmr_reader.py: Handles reading NMR data files
-# - nmr_plotter.py: Handles plotting functionality
-# - nmr_gui.py: Handles the GUI interface
-# 
-# You can delete everything below this line once you've confirmed the new structure works.
-# ==============================================================================
-
-import numpy as np
-import matplotlib.pyplot as plt
 from tkinter import filedialog, messagebox, ttk
-import matplotlib.ticker as ticker
 import os
-import re
+from nmr_plotter import set_plot_quality, plot_nmr_data
 
-class NMRPlotterGUI_OLD:
+
+class NMRPlotterGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("NMR Spectra Plotter")
@@ -51,11 +25,36 @@ class NMRPlotterGUI_OLD:
         self.file_paths = []
         self.setup_style()
         self.create_widgets()
+    
+    def setup_style(self):
+        """Configure ttk styles for purple theme."""
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        # Configure colors
+        style.configure('TFrame', background=self.bg_color)
+        style.configure('TLabel', background=self.bg_color, foreground=self.dark_purple, font=("Helvetica", 10))
+        style.configure('TLabelframe', background=self.bg_color, foreground=self.dark_purple)
+        style.configure('TLabelframe.Label', background=self.bg_color, foreground=self.dark_purple, 
+                       font=("Helvetica", 11, "bold"))
+        style.configure('TButton', background=self.accent_color, foreground='white', 
+                       font=("Helvetica", 10), padding=8)
+        style.map('TButton', background=[('active', self.dark_purple)])
+        style.configure('TRadiobutton', background=self.bg_color, foreground=self.dark_purple, 
+                       font=("Helvetica", 10))
+        style.configure('TCheckbutton', background=self.bg_color, foreground=self.dark_purple, 
+                       font=("Helvetica", 10))
+        style.configure('TEntry', fieldbackground='white', foreground=self.dark_purple)
         
     def create_widgets(self):
         # Main frame
-        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame = ttk.Frame(self.root, padding="15")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Configure grid weights for resizing
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(0, weight=1)
         
         # Title
         title_label = tk.Label(main_frame, text="NMR Spectra Plotter", 
@@ -182,146 +181,3 @@ class NMRPlotterGUI_OLD:
             
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred:\n{str(e)}")
-
-def set_plot_quality(quality='publication'):
-    """Sets matplotlib parameters based on quality mode."""
-    if quality == 'publication':
-        plt.rcParams['figure.dpi'] = 300
-        plt.rcParams['savefig.dpi'] = 300
-        plt.rcParams['font.size'] = 10
-        plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['axes.linewidth'] = 1.0
-        plt.rcParams['lines.linewidth'] = 1.0
-        plt.rcParams['xtick.major.width'] = 0.8
-        plt.rcParams['ytick.major.width'] = 0.8
-        plt.rcParams['xtick.minor.width'] = 0.5
-        plt.rcParams['ytick.minor.width'] = 0.5
-    else:  # preview
-        plt.rcParams['figure.dpi'] = 100
-        plt.rcParams['savefig.dpi'] = 100
-        plt.rcParams['font.size'] = 9
-        plt.rcParams['font.family'] = 'sans-serif'
-        plt.rcParams['axes.linewidth'] = 0.8
-        plt.rcParams['lines.linewidth'] = 0.8
-        plt.rcParams['xtick.major.width'] = 0.6
-        plt.rcParams['ytick.major.width'] = 0.6
-        plt.rcParams['xtick.minor.width'] = 0.4
-        plt.rcParams['ytick.minor.width'] = 0.4
-
-def readNMR(file_path):
-    """Reads an NMR data file and extracts x_values (ppm) and y_values (intensity)."""
-    left, right, size = None, None, None
-    data = []
-
-    try:
-        with open(file_path, 'r') as file:
-            for line in file:
-                if line.startswith('# LEFT'):
-                    # Use regex for cleaner parsing
-                    matches = re.findall(r'([\d.]+)\s*ppm', line)
-                    if len(matches) >= 2:
-                        left, right = float(matches[0]), float(matches[1])
-                elif line.startswith('# SIZE'):
-                    size = int(re.search(r'=\s*(\d+)', line).group(1))
-                elif not line.startswith('#') and line.strip():
-                    data.append(float(line.strip()))
-
-        if left is None or right is None or size is None:
-            raise ValueError(f"Failed to extract LEFT, RIGHT, or SIZE from {file_path}.")
-
-        x_values = np.linspace(left, right, size)
-        y_values = np.array(data[:size])  # Use size directly instead of len(x_values)
-
-        return x_values, y_values
-    
-    except (IOError, ValueError) as e:
-        raise ValueError(f"Error reading {os.path.basename(file_path)}: {e}")
-
-def plot_nmr_data(file_paths, plot_mode, x_limits=None):
-    """Plot NMR data according to specified parameters."""
-    num_files = len(file_paths)
-    formatter = ticker.ScalarFormatter(useMathText=True)
-    
-    if plot_mode == "multiple":
-        # Plot all spectra on the same figure
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Generate color gradient
-        colors = plt.cm.viridis(np.linspace(0, 1, num_files))
-        
-        for idx, (color, file_path) in enumerate(zip(colors, file_paths)):
-            try:
-                x_values, y_values = readNMR(file_path)
-                
-                # Reverse if needed to ensure decreasing order (NMR standard)
-                if x_values[0] < x_values[-1]:
-                    x_values = x_values[::-1]
-                    y_values = y_values[::-1]
-                
-                filename = os.path.basename(file_path)
-                ax.plot(x_values, y_values, linewidth=0.8, label=filename, color=color)
-            
-            except ValueError as e:
-                print(f"Warning: {e}")
-        
-        ax.set_xlabel("ppm", fontsize=10)
-        ax.set_ylabel("Intensity", fontsize=10)
-        ax.legend(fontsize=9, frameon=False, loc='upper right')
-        ax.invert_xaxis()
-        
-        # Apply custom x-axis limits if provided
-        if x_limits:
-            ax.set_xlim(x_limits)
-        
-        ax.yaxis.set_major_formatter(formatter)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        ax.tick_params(axis='both', which='major', labelsize=9)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        
-        fig.suptitle("NMR Spectra", fontsize=12, y=0.995)
-        plt.tight_layout(rect=[0, 0, 1, 0.99])
-        plt.show()
-    
-    else:  # single mode
-        # Plot each spectrum in a separate figure
-        for file_path in file_paths:
-            try:
-                x_values, y_values = readNMR(file_path)
-                
-                # Reverse if needed to ensure decreasing order (NMR standard)
-                if x_values[0] < x_values[-1]:
-                    x_values = x_values[::-1]
-                    y_values = y_values[::-1]
-                
-                filename = os.path.basename(file_path)
-                
-                fig, ax = plt.subplots(figsize=(10, 6))
-                ax.plot(x_values, y_values, linewidth=0.8, color='#1f77b4')
-                
-                ax.set_xlabel("ppm", fontsize=10)
-                ax.set_ylabel("Intensity", fontsize=10)
-                ax.set_title(filename, fontsize=12)
-                ax.invert_xaxis()
-                
-                # Apply custom x-axis limits if provided
-                if x_limits:
-                    ax.set_xlim(x_limits)
-                
-                ax.yaxis.set_major_formatter(formatter)
-                ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-                ax.tick_params(axis='both', which='major', labelsize=9)
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False)
-                
-                plt.tight_layout()
-                plt.show()
-            
-            except ValueError as e:
-                print(f"Warning: {e}")
-
-# Main execution
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = NMRPlotterGUI(root)
-    root.mainloop()
