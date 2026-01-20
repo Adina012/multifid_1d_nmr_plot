@@ -136,12 +136,12 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
             except ValueError as e:
                 print(f"Warning: {e}")
         
-        ax.set_xlabel("ppm", fontsize=10)
-        ax.set_ylabel("Intensity", fontsize=10)
-          # Place a compact legend in the upper-right corner inside the figure
-          # Use a smaller font so it covers less of the data
-          ax.legend(fontsize=7, frameon=False, loc='upper right', bbox_to_anchor=(0.98, 0.98))
-        ax.invert_xaxis()
+                ax.set_xlabel("ppm", fontsize=10)
+                ax.set_ylabel("Intensity", fontsize=10)
+                # Place a compact legend in the upper-right corner inside the axes
+                # Use a smaller font so it covers less of the data
+                ax.legend(fontsize=7, frameon=False, loc='upper right', bbox_to_anchor=(0.98, 0.98))
+                ax.invert_xaxis()
         
         ax.yaxis.set_major_formatter(formatter)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
