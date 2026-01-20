@@ -138,7 +138,9 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         
         ax.set_xlabel("ppm", fontsize=10)
         ax.set_ylabel("Intensity", fontsize=10)
-        ax.legend(fontsize=9, frameon=False, loc='upper right')
+          # Place a compact legend in the upper-right corner inside the figure
+          # Use a smaller font so it covers less of the data
+          ax.legend(fontsize=7, frameon=False, loc='upper right', bbox_to_anchor=(0.98, 0.98))
         ax.invert_xaxis()
         
         ax.yaxis.set_major_formatter(formatter)
@@ -148,7 +150,8 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         ax.spines['right'].set_visible(False)
         
         fig.suptitle("NMR Spectra", fontsize=12, y=0.995)
-        plt.tight_layout(rect=[0, 0, 1, 0.99])
+        # Leave extra room on the right for the external legend
+        plt.tight_layout(rect=[0, 0, 0.82, 0.99])
         
         # Add key press event handler for clipboard copy
         def on_key(event):
@@ -156,6 +159,83 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
                 copy_figure_to_clipboard(fig)
         
         fig.canvas.mpl_connect('key_press_event', on_key)
+        plt.show()
+    
+    elif plot_mode == "stacked":
+        # Stack each file in its own subplot (vertical layout) within one figure
+        # Useful to compare spectra aligned vertically while keeping x-axis shared
+        if num_files == 0:
+            print("No files to plot.")
+            return
+
+        # Create one subplot per file, share x-axis
+        fig, axes = plt.subplots(num_files, 1, sharex=True, figsize=(10, max(3 * num_files, 6)))
+        # Ensure axes is iterable
+        if num_files == 1:
+            axes = [axes]
+
+        # Color map for consistent coloring across subplots
+        colors = plt.cm.viridis(np.linspace(0, 1, num_files))
+
+        for ax, color, file_path in zip(axes, colors, file_paths):
+            try:
+                x_values, y_values = readNMR(file_path, x_limits=x_limits)
+
+                # Reverse if needed to ensure decreasing order (NMR standard)
+                if len(x_values) > 0 and x_values[0] < x_values[-1]:
+                    x_values = x_values[::-1]
+                    y_values = y_values[::-1]
+
+                filename = os.path.basename(file_path)
+                ax.plot(x_values, y_values, linewidth=0.8, color=color)
+                ax.set_ylabel('Intensity', fontsize=9)
+                ax.set_title(filename, fontsize=10)
+                ax.invert_xaxis()
+
+                ax.yaxis.set_major_formatter(formatter)
+                ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+                ax.tick_params(axis='both', which='major', labelsize=8)
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+
+            except ValueError as e:
+                print(f"Warning: {e}")
+
+        # Label x-axis on the bottom subplot only
+        axes[-1].set_xlabel('ppm', fontsize=10)
+
+        fig.suptitle('NMR Spectra (stacked)', fontsize=12, y=0.995)
+        plt.tight_layout(rect=[0, 0, 0.98, 0.99])
+
+        # Build a single compact legend for the stacked figure in the top-right
+        # corner of the figure (collect labels from each subplot)
+        handles = []
+        labels = []
+        for ax in axes:
+            h, l = ax.get_legend_handles_labels()
+            if h:
+                handles.extend(h)
+                labels.extend(l)
+
+        # If no handles were created on the axes (we didn't set labels per-ax),
+        # create legend entries using the filename labels from the axes titles.
+        if not handles:
+            for ax in axes:
+                # Use a dummy line with invisible color to create legend entries
+                lab = ax.get_title()
+                handles.append(plt.Line2D([0], [0], color='black', linewidth=0))
+                labels.append(lab)
+
+        if handles:
+            fig.legend(handles, labels, loc='upper right', fontsize=7, frameon=False,
+                       bbox_to_anchor=(0.98, 0.98))
+
+        # Add clipboard copy handler
+        def on_key_stack(event):
+            if event.key == 'c':
+                copy_figure_to_clipboard(fig)
+
+        fig.canvas.mpl_connect('key_press_event', on_key_stack)
         plt.show()
     
     else:  # single mode

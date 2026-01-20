@@ -92,6 +92,11 @@ class NMRPlotterGUI:
                        variable=self.plot_mode, value="multiple").grid(row=0, column=0, sticky=tk.W, pady=5)
         ttk.Radiobutton(mode_frame, text="One spectrum per figure", 
                        variable=self.plot_mode, value="single").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Radiobutton(mode_frame, text="Stacked subplots (each spectrum in its own row)",
+                   variable=self.plot_mode, value="stacked").grid(row=2, column=0, sticky=tk.W, pady=5)
+        stacked_help = ttk.Label(mode_frame, text="Stacked: aligns spectra vertically, shared x-axis",
+                     font=("Helvetica", 8, "italic"))
+        stacked_help.grid(row=3, column=0, sticky=tk.W, pady=(0, 6))
         
         # Quality Mode Section
         quality_frame = ttk.LabelFrame(main_frame, text="Plot Quality", padding="15")
