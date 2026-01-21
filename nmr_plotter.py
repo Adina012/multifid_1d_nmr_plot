@@ -136,12 +136,12 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
             except ValueError as e:
                 print(f"Warning: {e}")
         
-                ax.set_xlabel("ppm", fontsize=10)
-                ax.set_ylabel("Intensity", fontsize=10)
-                # Place a compact legend in the upper-right corner inside the axes
-                # Use a smaller font so it covers less of the data
-                ax.legend(fontsize=7, frameon=False, loc='upper right', bbox_to_anchor=(0.98, 0.98))
-                ax.invert_xaxis()
+        ax.set_xlabel("ppm", fontsize=10)
+        ax.set_ylabel("Intensity", fontsize=10)
+        # Place a compact legend in the upper-right corner inside the axes
+        # Use a smaller font so it covers less of the data
+        ax.legend(fontsize=7, frameon=False, loc='upper right')
+        ax.invert_xaxis()
         
         ax.yaxis.set_major_formatter(formatter)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
@@ -149,9 +149,8 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         
-        fig.suptitle("NMR Spectra", fontsize=12, y=0.995)
-        # Leave extra room on the right for the external legend
-        plt.tight_layout(rect=[0, 0, 0.82, 0.99])
+        # No figure title
+        plt.tight_layout()
         
         # Add key press event handler for clipboard copy
         def on_key(event):
@@ -187,9 +186,10 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
                     y_values = y_values[::-1]
 
                 filename = os.path.basename(file_path)
-                ax.plot(x_values, y_values, linewidth=0.8, color=color)
+                # Plot with label for legend
+                ax.plot(x_values, y_values, linewidth=0.8, color=color, label=filename)
                 ax.set_ylabel('Intensity', fontsize=9)
-                ax.set_title(filename, fontsize=10)
+                # No subplot title - filenames will appear in legend only
                 ax.invert_xaxis()
 
                 ax.yaxis.set_major_formatter(formatter)
@@ -204,8 +204,8 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         # Label x-axis on the bottom subplot only
         axes[-1].set_xlabel('ppm', fontsize=10)
 
-        fig.suptitle('NMR Spectra (stacked)', fontsize=12, y=0.995)
-        plt.tight_layout(rect=[0, 0, 0.98, 0.99])
+        # No figure title
+        plt.tight_layout()
 
         # Build a single compact legend for the stacked figure in the top-right
         # corner of the figure (collect labels from each subplot)
@@ -216,15 +216,6 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
             if h:
                 handles.extend(h)
                 labels.extend(l)
-
-        # If no handles were created on the axes (we didn't set labels per-ax),
-        # create legend entries using the filename labels from the axes titles.
-        if not handles:
-            for ax in axes:
-                # Use a dummy line with invisible color to create legend entries
-                lab = ax.get_title()
-                handles.append(plt.Line2D([0], [0], color='black', linewidth=0))
-                labels.append(lab)
 
         if handles:
             fig.legend(handles, labels, loc='upper right', fontsize=7, frameon=False,
