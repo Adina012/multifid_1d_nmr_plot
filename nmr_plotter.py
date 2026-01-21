@@ -191,8 +191,6 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
                 ax.plot(x_values, y_values, linewidth=0.8, color=color, label=filename)
                 ax.set_ylabel('Intensity', fontsize=9)
                 # No subplot title - filenames will appear in legend only
-                # NMR convention: high ppm on left, low ppm on right
-                ax.invert_xaxis()
 
                 ax.yaxis.set_major_formatter(formatter)
                 ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
@@ -205,6 +203,9 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
 
         # Label x-axis on the bottom subplot only
         axes[-1].set_xlabel('ppm', fontsize=10)
+        
+        # NMR convention: high ppm on left, low ppm on right (invert once for shared x-axis)
+        axes[0].invert_xaxis()
 
         # No figure title
         plt.tight_layout()
