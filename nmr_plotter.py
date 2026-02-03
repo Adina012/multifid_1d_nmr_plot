@@ -97,7 +97,7 @@ def set_plot_quality(quality='publication'):
         plt.rcParams['ytick.minor.width'] = 0.4
 
 
-def plot_nmr_data(file_paths, plot_mode, x_limits=None):
+def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis'):
     """
     Plot NMR data according to specified parameters.
     
@@ -109,6 +109,9 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         'multiple' for all spectra on same figure, 'single' for separate figures
     x_limits : tuple of (float, float), optional
         X-axis limits as (x_max, x_min) in ppm. Data will be filtered to this range.
+    color_theme : str, optional
+        Matplotlib colormap name (default: 'viridis'). Options: 'viridis', 'plasma', 
+        'inferno', 'magma', 'cool', 'rainbow', etc.
     """
     num_files = len(file_paths)
     formatter = ticker.ScalarFormatter(useMathText=True)
@@ -117,8 +120,8 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         # Plot all spectra on the same figure
         fig, ax = plt.subplots(figsize=(10, 6))
         
-        # Generate color gradient
-        colors = plt.cm.viridis(np.linspace(0, 1, num_files))
+        # Generate color gradient using selected theme
+        colors = plt.cm.get_cmap(color_theme)(np.linspace(0, 1, num_files))
         
         for idx, (color, file_path) in enumerate(zip(colors, file_paths)):
             try:
@@ -174,8 +177,8 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None):
         if num_files == 1:
             axes = [axes]
 
-        # Color map for consistent coloring across subplots
-        colors = plt.cm.viridis(np.linspace(0, 1, num_files))
+        # Color map using selected theme
+        colors = plt.cm.get_cmap(color_theme)(np.linspace(0, 1, num_files))
 
         for ax, color, file_path in zip(axes, colors, file_paths):
             try:

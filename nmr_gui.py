@@ -108,9 +108,27 @@ class NMRPlotterGUI:
         ttk.Radiobutton(quality_frame, text="Preview quality (100 DPI)", 
                        variable=self.quality_mode, value="preview").grid(row=1, column=0, sticky=tk.W, pady=5)
         
+        # Color Theme Section
+        theme_frame = ttk.LabelFrame(main_frame, text="Color Theme", padding="15")
+        theme_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        
+        self.color_theme = tk.StringVar(value="viridis")
+        ttk.Radiobutton(theme_frame, text="Viridis (purple-yellow)", 
+                       variable=self.color_theme, value="viridis").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Radiobutton(theme_frame, text="Plasma (purple-pink-orange)", 
+                       variable=self.color_theme, value="plasma").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Radiobutton(theme_frame, text="Inferno (black-purple-yellow)", 
+                       variable=self.color_theme, value="inferno").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Radiobutton(theme_frame, text="Magma (black-purple-white)", 
+                       variable=self.color_theme, value="magma").grid(row=0, column=1, sticky=tk.W, padx=(30, 0), pady=5)
+        ttk.Radiobutton(theme_frame, text="Cool (cyan-magenta)", 
+                       variable=self.color_theme, value="cool").grid(row=1, column=1, sticky=tk.W, padx=(30, 0), pady=5)
+        ttk.Radiobutton(theme_frame, text="Rainbow (spectral)", 
+                       variable=self.color_theme, value="rainbow").grid(row=2, column=1, sticky=tk.W, padx=(30, 0), pady=5)
+        
         # X-Axis Limits Section
         xlim_frame = ttk.LabelFrame(main_frame, text="X-Axis Limits (ppm) - Zoom to Region", padding="15")
-        xlim_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        xlim_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
         
         self.use_custom_limits = tk.BooleanVar(value=False)
         ttk.Checkbutton(xlim_frame, text="Enable zoom (only plot selected region)", 
@@ -134,7 +152,7 @@ class NMRPlotterGUI:
         
         # Plot Button
         plot_button = ttk.Button(main_frame, text="📊 Plot Spectra", command=self.plot_spectra, width=35)
-        plot_button.grid(row=5, column=0, columnspan=3, pady=25)
+        plot_button.grid(row=6, column=0, columnspan=3, pady=25)
         
     def select_files(self):
         file_paths = filedialog.askopenfilenames(
@@ -171,6 +189,7 @@ class NMRPlotterGUI:
             # Get settings
             quality = self.quality_mode.get()
             plot_mode = self.plot_mode.get()
+            color_theme = self.color_theme.get()
             
             # Get x-axis limits if enabled
             x_limits = None
@@ -187,7 +206,7 @@ class NMRPlotterGUI:
             set_plot_quality(quality)
             
             # Plot
-            plot_nmr_data(self.file_paths, plot_mode, x_limits)
+            plot_nmr_data(self.file_paths, plot_mode, x_limits, color_theme)
             
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred:\n{str(e)}")
