@@ -97,7 +97,7 @@ def set_plot_quality(quality='publication'):
         plt.rcParams['ytick.minor.width'] = 0.4
 
 
-def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis'):
+def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', custom_labels=None):
     """
     Plot NMR data according to specified parameters.
     
@@ -112,6 +112,8 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis'):
     color_theme : str, optional
         Matplotlib colormap name (default: 'viridis'). Options: 'viridis', 'plasma', 
         'inferno', 'magma', 'cool', 'rainbow', etc.
+    custom_labels : list of str, optional
+        Custom legend labels. If None, uses filenames. Should match number of files.
     """
     num_files = len(file_paths)
     formatter = ticker.ScalarFormatter(useMathText=True)
@@ -134,7 +136,9 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis'):
                     y_values = y_values[::-1]
                 
                 filename = os.path.basename(file_path)
-                ax.plot(x_values, y_values, linewidth=0.8, label=filename, color=color)
+                # Use custom label if provided, otherwise use filename
+                label = custom_labels[idx] if custom_labels and idx < len(custom_labels) else filename
+                ax.plot(x_values, y_values, linewidth=0.8, label=label, color=color)
             
             except ValueError as e:
                 print(f"Warning: {e}")
@@ -180,7 +184,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis'):
         # Color map using selected theme
         colors = plt.cm.get_cmap(color_theme)(np.linspace(0, 1, num_files))
 
-        for ax, color, file_path in zip(axes, colors, file_paths):
+        for idx, (ax, color, file_path) in enumerate(zip(axes, colors, file_paths)):
             try:
                 x_values, y_values = readNMR(file_path, x_limits=x_limits)
 
@@ -190,8 +194,10 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis'):
                     y_values = y_values[::-1]
 
                 filename = os.path.basename(file_path)
+                # Use custom label if provided, otherwise use filename
+                label = custom_labels[idx] if custom_labels and idx < len(custom_labels) else filename
                 # Plot with label for legend
-                ax.plot(x_values, y_values, linewidth=0.8, color=color, label=filename)
+                ax.plot(x_values, y_values, linewidth=0.8, color=color, label=label)
                 ax.set_ylabel('Intensity', fontsize=9)
                 # No subplot title - filenames will appear in legend only
 

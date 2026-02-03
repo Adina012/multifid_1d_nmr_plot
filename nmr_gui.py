@@ -12,7 +12,7 @@ class NMRPlotterGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("NMR Spectra Plotter")
-        self.root.geometry("700x650")
+        self.root.geometry("750x700")
         self.root.resizable(True, True)
         
         # Set purple theme colors
@@ -47,13 +47,34 @@ class NMRPlotterGUI:
         style.configure('TEntry', fieldbackground='white', foreground=self.dark_purple)
         
     def create_widgets(self):
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="15")
+        # Create canvas and scrollbar
+        canvas = tk.Canvas(self.root, bg=self.bg_color, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Bind mousewheel for scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Main frame inside scrollable area
+        main_frame = ttk.Frame(scrollable_frame, padding="15")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure grid weights for resizing
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
+        scrollable_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
         
         # Title
@@ -126,9 +147,26 @@ class NMRPlotterGUI:
         ttk.Radiobutton(theme_frame, text="Rainbow (spectral)", 
                        variable=self.color_theme, value="rainbow").grid(row=2, column=1, sticky=tk.W, padx=(30, 0), pady=5)
         
+        # Custom Legend Section
+        legend_frame = ttk.LabelFrame(main_frame, text="Custom Legend Labels", padding="15")
+        legend_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        
+        self.use_custom_legend = tk.BooleanVar(value=False)
+        ttk.Checkbutton(legend_frame, text="Use custom labels (leave unchecked for filenames)", 
+                       variable=self.use_custom_legend, 
+                       command=self.toggle_legend).grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=8)
+        
+        ttk.Label(legend_frame, text="Labels (comma-separated):").grid(row=1, column=0, sticky=tk.W, padx=(25, 10), pady=8)
+        self.legend_entry = ttk.Entry(legend_frame, width=60, state="disabled")
+        self.legend_entry.grid(row=1, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=8)
+        
+        help_legend = ttk.Label(legend_frame, text="💡 Tip: Enter labels in same order as files, e.g., 'Sample A, Sample B, Control'", 
+                              font=("Helvetica", 8, "italic"))
+        help_legend.grid(row=2, column=0, columnspan=3, sticky=tk.W, padx=(25, 0), pady=(5, 0))
+        
         # X-Axis Limits Section
         xlim_frame = ttk.LabelFrame(main_frame, text="X-Axis Limits (ppm) - Zoom to Region", padding="15")
-        xlim_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        xlim_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
         
         self.use_custom_limits = tk.BooleanVar(value=False)
         ttk.Checkbutton(xlim_frame, text="Enable zoom (only plot selected region)", 
@@ -152,7 +190,7 @@ class NMRPlotterGUI:
         
         # Plot Button
         plot_button = ttk.Button(main_frame, text="📊 Plot Spectra", command=self.plot_spectra, width=35)
-        plot_button.grid(row=6, column=0, columnspan=3, pady=25)
+        plot_button.grid(row=7, column=0, columnspan=3, pady=25)
         
     def select_files(self):
         file_paths = filedialog.askopenfilenames(
@@ -180,6 +218,10 @@ class NMRPlotterGUI:
         self.x_max_entry.config(state=state)
         self.x_min_entry.config(state=state)
     
+    def toggle_legend(self):
+        state = "normal" if self.use_custom_legend.get() else "disabled"
+        self.legend_entry.config(state=state)
+    
     def plot_spectra(self):
         if not self.file_paths:
             messagebox.showwarning("No Files", "Please select at least one NMR data file.")
@@ -190,6 +232,13 @@ class NMRPlotterGUI:
             quality = self.quality_mode.get()
             plot_mode = self.plot_mode.get()
             color_theme = self.color_theme.get()
+            
+            # Get custom legend labels if enabled
+            custom_labels = None
+            if self.use_custom_legend.get():
+                labels_text = self.legend_entry.get().strip()
+                if labels_text:
+                    custom_labels = [label.strip() for label in labels_text.split(',')]
             
             # Get x-axis limits if enabled
             x_limits = None
@@ -206,7 +255,7 @@ class NMRPlotterGUI:
             set_plot_quality(quality)
             
             # Plot
-            plot_nmr_data(self.file_paths, plot_mode, x_limits, color_theme)
+            plot_nmr_data(self.file_paths, plot_mode, x_limits, color_theme, custom_labels)
             
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred:\n{str(e)}")
