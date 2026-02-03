@@ -153,6 +153,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
         
         ax.yaxis.set_major_formatter(formatter)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        ax.yaxis.get_offset_text().set_fontsize(7)
         ax.tick_params(axis='both', which='major', labelsize=9)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -203,6 +204,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
 
                 ax.yaxis.set_major_formatter(formatter)
                 ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+                ax.yaxis.get_offset_text().set_fontsize(6)
                 ax.tick_params(axis='both', which='major', labelsize=8)
                 ax.spines['top'].set_visible(False)
                 ax.spines['right'].set_visible(False)
@@ -266,6 +268,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
                 
                 ax.yaxis.set_major_formatter(formatter)
                 ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+                ax.yaxis.get_offset_text().set_fontsize(7)
                 ax.tick_params(axis='both', which='major', labelsize=9)
                 ax.spines['top'].set_visible(False)
                 ax.spines['right'].set_visible(False)
