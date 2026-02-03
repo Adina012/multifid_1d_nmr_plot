@@ -142,10 +142,10 @@ class NMRPlotterGUI:
                        variable=self.color_theme, value="inferno").grid(row=2, column=0, sticky=tk.W, pady=5)
         ttk.Radiobutton(theme_frame, text="Magma (black-purple-white)", 
                        variable=self.color_theme, value="magma").grid(row=0, column=1, sticky=tk.W, padx=(30, 0), pady=5)
-        ttk.Radiobutton(theme_frame, text="Cool (cyan-magenta)", 
-                       variable=self.color_theme, value="cool").grid(row=1, column=1, sticky=tk.W, padx=(30, 0), pady=5)
-        ttk.Radiobutton(theme_frame, text="Rainbow (spectral)", 
-                       variable=self.color_theme, value="rainbow").grid(row=2, column=1, sticky=tk.W, padx=(30, 0), pady=5)
+        ttk.Radiobutton(theme_frame, text="Muted (soft tones)", 
+                       variable=self.color_theme, value="tab10").grid(row=1, column=1, sticky=tk.W, padx=(30, 0), pady=5)
+        ttk.Radiobutton(theme_frame, text="Spring Pastels (soft colors)", 
+                       variable=self.color_theme, value="Set2").grid(row=2, column=1, sticky=tk.W, padx=(30, 0), pady=5)
         
         # Custom Legend Section
         legend_frame = ttk.LabelFrame(main_frame, text="Custom Legend Labels", padding="15")
