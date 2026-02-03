@@ -254,8 +254,8 @@ class NMRPlotterGUI:
             # Set plot quality
             set_plot_quality(quality)
             
-            # Plot
-            plot_nmr_data(self.file_paths, plot_mode, x_limits, color_theme, custom_labels)
+            # Plot (pass quality so plotter can adjust legend sizing)
+            plot_nmr_data(self.file_paths, plot_mode, x_limits, color_theme, custom_labels, quality)
             
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred:\n{str(e)}")

@@ -97,7 +97,7 @@ def set_plot_quality(quality='publication'):
         plt.rcParams['ytick.minor.width'] = 0.4
 
 
-def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', custom_labels=None):
+def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', custom_labels=None, quality='publication'):
     """
     Plot NMR data according to specified parameters.
     
@@ -118,6 +118,15 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
     num_files = len(file_paths)
     formatter = ticker.ScalarFormatter(useMathText=True)
     
+    # Determine legend font sizes based on quality (preview should be slightly larger)
+    if quality == 'preview':
+        # Make legends noticeably larger in preview mode for readability
+        legend_font = 12
+        stacked_legend_font = 11
+    else:
+        legend_font = 7
+        stacked_legend_font = 7
+
     if plot_mode == "multiple":
         # Plot all spectra on the same figure
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -147,7 +156,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
         ax.set_ylabel("Intensity", fontsize=10)
         # Place a compact legend in the upper-right corner inside the axes
         # Use a smaller font so it covers less of the data
-        ax.legend(fontsize=7, frameon=False, loc='upper right')
+        ax.legend(fontsize=legend_font, frameon=False, loc='upper right')
         # NMR convention: high ppm (positive) on left, low ppm (negative) on right
         ax.invert_xaxis()
         
@@ -232,7 +241,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
                 labels.extend(l)
 
         if handles:
-            fig.legend(handles, labels, loc='upper right', fontsize=7, frameon=False,
+            fig.legend(handles, labels, loc='upper right', fontsize=stacked_legend_font, frameon=False,
                        bbox_to_anchor=(0.98, 0.98))
 
         # Add clipboard copy handler
