@@ -97,7 +97,15 @@ def set_plot_quality(quality='publication'):
         plt.rcParams['ytick.minor.width'] = 0.4
 
 
-def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', custom_labels=None, quality='publication'):
+def plot_nmr_data(
+    file_paths,
+    plot_mode,
+    x_limits=None,
+    color_theme='viridis',
+    custom_labels=None,
+    quality='publication',
+    sample_amounts_mg=None,
+):
     """
     Plot NMR data according to specified parameters.
     
@@ -114,9 +122,13 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
         'inferno', 'magma', 'cool', 'rainbow', etc.
     custom_labels : list of str, optional
         Custom legend labels. If None, uses filenames. Should match number of files.
+    sample_amounts_mg : list of float, optional
+        Sample amounts in mg for each file. If provided, intensity is normalized
+        as y_normalized = y / amount_mg for each corresponding file.
     """
     num_files = len(file_paths)
     formatter = ticker.ScalarFormatter(useMathText=True)
+    y_axis_label = "Intensity / mg" if sample_amounts_mg is not None else "Intensity"
     
     # Determine legend font sizes based on quality (preview should be slightly larger)
     if quality == 'preview':
@@ -143,6 +155,9 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
                 if len(x_values) > 0 and x_values[0] < x_values[-1]:
                     x_values = x_values[::-1]
                     y_values = y_values[::-1]
+
+                if sample_amounts_mg is not None and idx < len(sample_amounts_mg):
+                    y_values = y_values / sample_amounts_mg[idx]
                 
                 filename = os.path.basename(file_path)
                 # Use custom label if provided, otherwise use filename
@@ -153,7 +168,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
                 print(f"Warning: {e}")
         
         ax.set_xlabel("ppm", fontsize=10)
-        ax.set_ylabel("Intensity", fontsize=10)
+        ax.set_ylabel(y_axis_label, fontsize=10)
         # Place a compact legend in the upper-right corner inside the axes
         # Use a smaller font so it covers less of the data
         ax.legend(fontsize=legend_font, frameon=False, loc='upper right')
@@ -203,12 +218,15 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
                     x_values = x_values[::-1]
                     y_values = y_values[::-1]
 
+                if sample_amounts_mg is not None and idx < len(sample_amounts_mg):
+                    y_values = y_values / sample_amounts_mg[idx]
+
                 filename = os.path.basename(file_path)
                 # Use custom label if provided, otherwise use filename
                 label = custom_labels[idx] if custom_labels and idx < len(custom_labels) else filename
                 # Plot with label for legend
                 ax.plot(x_values, y_values, linewidth=0.8, color=color, label=label)
-                ax.set_ylabel('Intensity', fontsize=9)
+                ax.set_ylabel(y_axis_label, fontsize=9)
                 # No subplot title - filenames will appear in legend only
 
                 ax.yaxis.set_major_formatter(formatter)
@@ -254,7 +272,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
     
     else:  # single mode
         # Plot each spectrum in a separate figure
-        for file_path in file_paths:
+        for idx, file_path in enumerate(file_paths):
             try:
                 # Pass x_limits to readNMR so it filters the data
                 x_values, y_values = readNMR(file_path, x_limits=x_limits)
@@ -263,6 +281,9 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
                 if len(x_values) > 0 and x_values[0] < x_values[-1]:
                     x_values = x_values[::-1]
                     y_values = y_values[::-1]
+
+                if sample_amounts_mg is not None and idx < len(sample_amounts_mg):
+                    y_values = y_values / sample_amounts_mg[idx]
                 
                 filename = os.path.basename(file_path)
                 
@@ -270,7 +291,7 @@ def plot_nmr_data(file_paths, plot_mode, x_limits=None, color_theme='viridis', c
                 ax.plot(x_values, y_values, linewidth=0.8, color='#1f77b4')
                 
                 ax.set_xlabel("ppm", fontsize=10)
-                ax.set_ylabel("Intensity", fontsize=10)
+                ax.set_ylabel(y_axis_label, fontsize=10)
                 ax.set_title(filename, fontsize=12)
                 # NMR convention: high ppm on left, low ppm on right
                 ax.invert_xaxis()
