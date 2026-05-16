@@ -128,7 +128,7 @@ def plot_nmr_data(
     """
     num_files = len(file_paths)
     formatter = ticker.ScalarFormatter(useMathText=True)
-    y_axis_label = "Intensity / mg" if sample_amounts_mg is not None else "Intensity"
+    y_axis_label = "Intensity (a.u.)"
     
     # Determine legend font sizes based on quality (preview should be slightly larger)
     if quality == 'preview':
@@ -183,7 +183,8 @@ def plot_nmr_data(
         ax.spines['right'].set_visible(False)
         
         # No figure title
-        plt.tight_layout()
+        # Add margins to ensure axis labels are visible
+        plt.tight_layout(rect=[0.08, 0.12, 0.98, 0.98])
         
         # Add key press event handler for clipboard copy
         def on_key(event):
@@ -246,7 +247,8 @@ def plot_nmr_data(
         axes[0].invert_xaxis()
 
         # No figure title
-        plt.tight_layout()
+        # Add margins to ensure axis labels are visible
+        plt.tight_layout(rect=[0.08, 0.12, 0.98, 0.98])
 
         # Build a single compact legend for the stacked figure in the top-right
         # corner of the figure (collect labels from each subplot)
@@ -303,7 +305,8 @@ def plot_nmr_data(
                 ax.spines['top'].set_visible(False)
                 ax.spines['right'].set_visible(False)
                 
-                plt.tight_layout()
+                # Add margins to ensure axis labels are visible
+                plt.tight_layout(rect=[0.08, 0.12, 0.98, 0.98])
                 
                 # Add key press event handler for clipboard copy
                 def on_key(event):
