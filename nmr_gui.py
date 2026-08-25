@@ -121,19 +121,9 @@ class NMRPlotterGUI:
                      font=("Helvetica", 8, "italic"))
         stacked_help.grid(row=3, column=0, sticky=tk.W, pady=(0, 6))
         
-        # Quality Mode Section
-        quality_frame = ttk.LabelFrame(main_frame, text="Plot Quality", padding="15")
-        quality_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
-        
-        self.quality_mode = tk.StringVar(value="publication")
-        ttk.Radiobutton(quality_frame, text="Publication quality (300 DPI)", 
-                       variable=self.quality_mode, value="publication").grid(row=0, column=0, sticky=tk.W, pady=5)
-        ttk.Radiobutton(quality_frame, text="Preview quality (100 DPI)", 
-                       variable=self.quality_mode, value="preview").grid(row=1, column=0, sticky=tk.W, pady=5)
-        
         # Color Theme Section
         theme_frame = ttk.LabelFrame(main_frame, text="Color Theme", padding="15")
-        theme_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        theme_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
         
         self.color_theme = tk.StringVar(value="viridis")
         ttk.Radiobutton(theme_frame, text="Viridis (purple-yellow)", 
@@ -150,27 +140,41 @@ class NMRPlotterGUI:
                        variable=self.color_theme, value="Set2").grid(row=2, column=1, sticky=tk.W, padx=(30, 0), pady=5)
         ttk.Radiobutton(theme_frame, text="Gradient Green (dark to mint)", 
                        variable=self.color_theme, value="gradient_green").grid(row=3, column=0, sticky=tk.W, pady=5)
+
+        self.show_area_under_curve = tk.BooleanVar(value=False)
+        ttk.Checkbutton(theme_frame, text="Shade area under curves",
+                   variable=self.show_area_under_curve).grid(row=4, column=0, columnspan=2,
+                                      sticky=tk.W, pady=(8, 0))
         
         # Custom Legend Section
         legend_frame = ttk.LabelFrame(main_frame, text="Custom Legend Labels", padding="15")
-        legend_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        legend_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
         
         self.use_custom_legend = tk.BooleanVar(value=False)
         ttk.Checkbutton(legend_frame, text="Use custom labels (leave unchecked for filenames)", 
                        variable=self.use_custom_legend, 
                        command=self.toggle_legend).grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=8)
+
+        self.show_legends = tk.BooleanVar(value=True)
+        ttk.Checkbutton(legend_frame, text="Show legends",
+                   variable=self.show_legends).grid(row=1, column=0, sticky=tk.W,
+                                padx=(25, 0), pady=4)
+        self.use_small_legends = tk.BooleanVar(value=False)
+        ttk.Checkbutton(legend_frame, text="Use smaller legends",
+                   variable=self.use_small_legends).grid(row=1, column=1, columnspan=2,
+                                     sticky=tk.W, pady=4)
         
-        ttk.Label(legend_frame, text="Labels (comma-separated):").grid(row=1, column=0, sticky=tk.W, padx=(25, 10), pady=8)
+        ttk.Label(legend_frame, text="Labels (comma-separated):").grid(row=2, column=0, sticky=tk.W, padx=(25, 10), pady=8)
         self.legend_entry = ttk.Entry(legend_frame, width=60, state="disabled")
-        self.legend_entry.grid(row=1, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=8)
+        self.legend_entry.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=8)
         
         help_legend = ttk.Label(legend_frame, text="💡 Tip: Enter labels in same order as files, e.g., 'Sample A, Sample B, Control'", 
                               font=("Helvetica", 8, "italic"))
-        help_legend.grid(row=2, column=0, columnspan=3, sticky=tk.W, padx=(25, 0), pady=(5, 0))
+        help_legend.grid(row=3, column=0, columnspan=3, sticky=tk.W, padx=(25, 0), pady=(5, 0))
 
         # Normalization Section
         norm_frame = ttk.LabelFrame(main_frame, text="Intensity Normalization", padding="15")
-        norm_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        norm_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
 
         self.use_normalization = tk.BooleanVar(value=False)
         ttk.Checkbutton(norm_frame, text="Normalize intensity by sample amount in tube (mg)",
@@ -188,7 +192,7 @@ class NMRPlotterGUI:
         
         # X-Axis Limits Section
         xlim_frame = ttk.LabelFrame(main_frame, text="X-Axis Limits (ppm) - Zoom to Region", padding="15")
-        xlim_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        xlim_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
         
         self.use_custom_limits = tk.BooleanVar(value=False)
         ttk.Checkbutton(xlim_frame, text="Enable zoom (only plot selected region)", 
@@ -212,7 +216,7 @@ class NMRPlotterGUI:
 
         # Axis Labels Section
         axis_label_frame = ttk.LabelFrame(main_frame, text="Axis Labels", padding="15")
-        axis_label_frame.grid(row=8, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        axis_label_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
         axis_label_frame.columnconfigure(1, weight=1)
 
         ttk.Label(axis_label_frame, text="X-axis label:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10), pady=5)
@@ -227,7 +231,7 @@ class NMRPlotterGUI:
         
         # Plot Button
         plot_button = ttk.Button(main_frame, text="📊 Plot Spectra", command=self.plot_spectra, width=35)
-        plot_button.grid(row=9, column=0, columnspan=3, pady=25)
+        plot_button.grid(row=8, column=0, columnspan=3, pady=25)
         
     def select_files(self):
         # Temporarily unbind wheel events while native dialog is open
@@ -322,9 +326,12 @@ class NMRPlotterGUI:
         
         try:
             # Get settings
-            quality = self.quality_mode.get()
+            quality = "publication"
             plot_mode = self.plot_mode.get()
             color_theme = self.color_theme.get()
+            show_area_under_curve = self.show_area_under_curve.get()
+            show_legends = self.show_legends.get()
+            use_small_legends = self.use_small_legends.get()
             x_axis_label = self.x_axis_label_entry.get().strip()
             y_axis_label = self.y_axis_label_entry.get().strip()
             
@@ -386,6 +393,9 @@ class NMRPlotterGUI:
                 plot_mode,
                 x_limits=x_limits,
                 color_theme=color_theme,
+                show_area_under_curve=show_area_under_curve,
+                show_legends=show_legends,
+                use_small_legends=use_small_legends,
                 custom_labels=custom_labels,
                 quality=quality,
                 sample_amounts_mg=sample_amounts_mg,

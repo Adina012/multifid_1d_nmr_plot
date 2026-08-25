@@ -8,7 +8,7 @@ A user-friendly GUI application for plotting 1D NMR spectra with customizable vi
 - 🎨 Purple-themed modern GUI
 - 🔧 Customizable x-axis limits
 - 🏷️ Customizable x- and y-axis labels
-- 📈 Publication quality (300 DPI) or preview mode (100 DPI)
+- 📈 Publication quality plotting at 300 DPI
 - 📁 Easy file selection and management
 - 🔄 Plot multiple spectra on same figure or separately
 
@@ -37,7 +37,7 @@ Contains the `NMRPlotterGUI` class which handles:
 
 ### `nmr_plotter.py`
 Handles all plotting operations:
-- Setting plot quality (publication/preview)
+- Applying publication-quality plot settings at 300 DPI
 - Creating single or multiple spectrum plots
 - Applying formatting and styles
 - Managing matplotlib parameters
@@ -59,7 +59,7 @@ Parses NMR data files:
 2. Use the GUI to:
    - Select one or more NMR data files (.txt)
    - Choose plot mode (single/multiple)
-   - Select quality (publication/preview)
+   - Plots are always generated at publication quality (300 DPI)
    - Optionally set custom x-axis limits
    - Optionally enter custom x-axis and y-axis labels
    - Click "Plot Spectra" to generate plots

@@ -128,6 +128,26 @@ def set_plot_quality(quality='publication'):
         plt.rcParams['ytick.minor.width'] = 0.4
 
 
+def _get_area_color(color):
+    """Return a lighter version of a curve color for area shading."""
+    curve_rgb = np.asarray(mcolors.to_rgb(color))
+    return tuple(curve_rgb + (1 - curve_rgb) * 0.35)
+
+
+def _plot_curve(ax, x_values, y_values, color, show_area_under_curve, **kwargs):
+    """Plot a curve and optionally shade the area between it and zero."""
+    if show_area_under_curve:
+        ax.fill_between(
+            x_values,
+            0,
+            y_values,
+            color=_get_area_color(color),
+            alpha=0.9,
+            linewidth=0,
+        )
+    return ax.plot(x_values, y_values, color=color, **kwargs)
+
+
 def plot_nmr_data(
     file_paths,
     plot_mode,
@@ -138,6 +158,9 @@ def plot_nmr_data(
     sample_amounts_mg=None,
     x_axis_label=None,
     y_axis_label=None,
+    show_area_under_curve=False,
+    show_legends=True,
+    use_small_legends=False,
 ):
     """
     Plot NMR data according to specified parameters.
@@ -162,6 +185,12 @@ def plot_nmr_data(
         Custom x-axis label. Defaults to ``ppm`` when empty or omitted.
     y_axis_label : str, optional
         Custom y-axis label. Defaults to ``Intensity (a.u.)`` when empty or omitted.
+    show_area_under_curve : bool, optional
+        Shade the area between each curve and the zero-intensity baseline.
+    show_legends : bool, optional
+        Display legends for plot modes that support them.
+    use_small_legends : bool, optional
+        Use a smaller legend font.
     """
     num_files = len(file_paths)
     formatter = ticker.ScalarFormatter(useMathText=True)
@@ -171,11 +200,11 @@ def plot_nmr_data(
     # Determine legend font sizes based on quality (preview should be slightly larger)
     if quality == 'preview':
         # Make legends noticeably larger in preview mode for readability
-        legend_font = 10
-        stacked_legend_font = 10
+        legend_font = 8 if use_small_legends else 10
+        stacked_legend_font = 8 if use_small_legends else 10
     else:
-        legend_font = 10
-        stacked_legend_font = 10
+        legend_font = 8 if use_small_legends else 10
+        stacked_legend_font = 8 if use_small_legends else 10
 
     if plot_mode == "multiple":
         # Plot all spectra on the same figure
@@ -200,7 +229,10 @@ def plot_nmr_data(
                 filename = os.path.basename(file_path)
                 # Use custom label if provided, otherwise use filename
                 label = custom_labels[idx] if custom_labels and idx < len(custom_labels) else filename
-                ax.plot(x_values, y_values, linewidth=0.8, label=label, color=color)
+                _plot_curve(
+                    ax, x_values, y_values, color, show_area_under_curve,
+                    linewidth=0.8, label=label,
+                )
             
             except ValueError as e:
                 print(f"Warning: {e}")
@@ -209,7 +241,8 @@ def plot_nmr_data(
         ax.set_ylabel(y_axis_label, fontsize=11)
         # Place a compact legend in the upper-right corner inside the axes
         # Use a smaller font so it covers less of the data
-        ax.legend(fontsize=legend_font, frameon=False, loc='upper right')
+        if show_legends:
+            ax.legend(fontsize=legend_font, frameon=False, loc='upper right')
         # NMR convention: high ppm (positive) on left, low ppm (negative) on right
         ax.invert_xaxis()
         
@@ -264,7 +297,10 @@ def plot_nmr_data(
                 # Use custom label if provided, otherwise use filename
                 label = custom_labels[idx] if custom_labels and idx < len(custom_labels) else filename
                 # Plot with label for legend
-                ax.plot(x_values, y_values, linewidth=0.8, color=color, label=label)
+                _plot_curve(
+                    ax, x_values, y_values, color, show_area_under_curve,
+                    linewidth=0.8, label=label,
+                )
                 ax.set_ylabel(y_axis_label, fontsize=11)
                 # No subplot title - filenames will appear in legend only
 
@@ -298,7 +334,7 @@ def plot_nmr_data(
                 handles.extend(h)
                 labels.extend(l)
 
-        if handles:
+        if show_legends and handles:
             fig.legend(handles, labels, loc='upper right', fontsize=stacked_legend_font, frameon=False,
                        bbox_to_anchor=(0.98, 0.98))
 
@@ -328,7 +364,11 @@ def plot_nmr_data(
                 filename = os.path.basename(file_path)
                 
                 fig, ax = plt.subplots(figsize=(10, 6))
-                ax.plot(x_values, y_values, linewidth=0.8, color='#1f77b4')
+                curve_color = '#1f77b4'
+                _plot_curve(
+                    ax, x_values, y_values, curve_color, show_area_under_curve,
+                    linewidth=0.8,
+                )
                 
                 ax.set_xlabel(x_axis_label, fontsize=11)
                 ax.set_ylabel(y_axis_label, fontsize=11)
