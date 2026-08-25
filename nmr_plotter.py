@@ -5,10 +5,35 @@ Handles plotting of NMR spectra data.
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import matplotlib.colors as mcolors
 import os
 import io
 from PIL import Image
 from nmr_reader import readNMR
+
+
+# Register custom colormaps
+def register_custom_colormaps():
+    """Register custom color schemes for plotting."""
+    # Gradient Green color scheme
+    gradient_green_colors = [
+        '#c5e1a5',  # Mint green
+        '#aed581',  # Very pale green
+        '#9ccc65',  # Pale green
+        '#8BC34A',  # Lighter green
+        '#7CB342',  # Light green
+        '#689F38',  # Green
+        '#558B2F',  # Forest green
+        '#33691E',  # Dark green
+    ]
+    gradient_green_cmap = mcolors.LinearSegmentedColormap.from_list(
+        'gradient_green', gradient_green_colors
+    )
+    plt.colormaps.register(gradient_green_cmap)
+
+
+# Register custom colormaps when module is imported
+register_custom_colormaps()
 
 
 def copy_figure_to_clipboard(fig):
@@ -77,7 +102,10 @@ def set_plot_quality(quality='publication'):
         plt.rcParams['figure.dpi'] = 300
         plt.rcParams['savefig.dpi'] = 300
         plt.rcParams['font.size'] = 10
-        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['axes.labelsize'] = 11
+        plt.rcParams['xtick.labelsize'] = 9
+        plt.rcParams['ytick.labelsize'] = 9
         plt.rcParams['axes.linewidth'] = 1.0
         plt.rcParams['lines.linewidth'] = 1.0
         plt.rcParams['xtick.major.width'] = 0.8
@@ -88,7 +116,10 @@ def set_plot_quality(quality='publication'):
         plt.rcParams['figure.dpi'] = 100
         plt.rcParams['savefig.dpi'] = 100
         plt.rcParams['font.size'] = 9
-        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['axes.labelsize'] = 11
+        plt.rcParams['xtick.labelsize'] = 9
+        plt.rcParams['ytick.labelsize'] = 9
         plt.rcParams['axes.linewidth'] = 0.8
         plt.rcParams['lines.linewidth'] = 0.8
         plt.rcParams['xtick.major.width'] = 0.6
@@ -105,6 +136,8 @@ def plot_nmr_data(
     custom_labels=None,
     quality='publication',
     sample_amounts_mg=None,
+    x_axis_label=None,
+    y_axis_label=None,
 ):
     """
     Plot NMR data according to specified parameters.
@@ -125,19 +158,24 @@ def plot_nmr_data(
     sample_amounts_mg : list of float, optional
         Sample amounts in mg for each file. If provided, intensity is normalized
         as y_normalized = y / amount_mg for each corresponding file.
+    x_axis_label : str, optional
+        Custom x-axis label. Defaults to ``ppm`` when empty or omitted.
+    y_axis_label : str, optional
+        Custom y-axis label. Defaults to ``Intensity (a.u.)`` when empty or omitted.
     """
     num_files = len(file_paths)
     formatter = ticker.ScalarFormatter(useMathText=True)
-    y_axis_label = "Intensity (a.u.)"
+    x_axis_label = x_axis_label.strip() if x_axis_label and x_axis_label.strip() else "ppm"
+    y_axis_label = y_axis_label.strip() if y_axis_label and y_axis_label.strip() else "Intensity (a.u.)"
     
     # Determine legend font sizes based on quality (preview should be slightly larger)
     if quality == 'preview':
         # Make legends noticeably larger in preview mode for readability
-        legend_font = 12
-        stacked_legend_font = 11
+        legend_font = 10
+        stacked_legend_font = 10
     else:
-        legend_font = 7
-        stacked_legend_font = 7
+        legend_font = 10
+        stacked_legend_font = 10
 
     if plot_mode == "multiple":
         # Plot all spectra on the same figure
@@ -167,8 +205,8 @@ def plot_nmr_data(
             except ValueError as e:
                 print(f"Warning: {e}")
         
-        ax.set_xlabel("ppm", fontsize=10)
-        ax.set_ylabel(y_axis_label, fontsize=10)
+        ax.set_xlabel(x_axis_label, fontsize=11)
+        ax.set_ylabel(y_axis_label, fontsize=11)
         # Place a compact legend in the upper-right corner inside the axes
         # Use a smaller font so it covers less of the data
         ax.legend(fontsize=legend_font, frameon=False, loc='upper right')
@@ -177,7 +215,7 @@ def plot_nmr_data(
         
         ax.yaxis.set_major_formatter(formatter)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        ax.yaxis.get_offset_text().set_fontsize(7)
+        ax.yaxis.get_offset_text().set_fontsize(9)
         ax.tick_params(axis='both', which='major', labelsize=9)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -227,13 +265,13 @@ def plot_nmr_data(
                 label = custom_labels[idx] if custom_labels and idx < len(custom_labels) else filename
                 # Plot with label for legend
                 ax.plot(x_values, y_values, linewidth=0.8, color=color, label=label)
-                ax.set_ylabel(y_axis_label, fontsize=9)
+                ax.set_ylabel(y_axis_label, fontsize=11)
                 # No subplot title - filenames will appear in legend only
 
                 ax.yaxis.set_major_formatter(formatter)
                 ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-                ax.yaxis.get_offset_text().set_fontsize(6)
-                ax.tick_params(axis='both', which='major', labelsize=8)
+                ax.yaxis.get_offset_text().set_fontsize(9)
+                ax.tick_params(axis='both', which='major', labelsize=9)
                 ax.spines['top'].set_visible(False)
                 ax.spines['right'].set_visible(False)
 
@@ -241,7 +279,7 @@ def plot_nmr_data(
                 print(f"Warning: {e}")
 
         # Label x-axis on the bottom subplot only
-        axes[-1].set_xlabel('ppm', fontsize=10)
+        axes[-1].set_xlabel(x_axis_label, fontsize=11)
         
         # NMR convention: high ppm on left, low ppm on right (invert once for shared x-axis)
         axes[0].invert_xaxis()
@@ -292,15 +330,15 @@ def plot_nmr_data(
                 fig, ax = plt.subplots(figsize=(10, 6))
                 ax.plot(x_values, y_values, linewidth=0.8, color='#1f77b4')
                 
-                ax.set_xlabel("ppm", fontsize=10)
-                ax.set_ylabel(y_axis_label, fontsize=10)
+                ax.set_xlabel(x_axis_label, fontsize=11)
+                ax.set_ylabel(y_axis_label, fontsize=11)
                 ax.set_title(filename, fontsize=12)
                 # NMR convention: high ppm on left, low ppm on right
                 ax.invert_xaxis()
                 
                 ax.yaxis.set_major_formatter(formatter)
                 ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-                ax.yaxis.get_offset_text().set_fontsize(7)
+                ax.yaxis.get_offset_text().set_fontsize(9)
                 ax.tick_params(axis='both', which='major', labelsize=9)
                 ax.spines['top'].set_visible(False)
                 ax.spines['right'].set_visible(False)

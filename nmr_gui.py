@@ -148,6 +148,8 @@ class NMRPlotterGUI:
                        variable=self.color_theme, value="tab10").grid(row=1, column=1, sticky=tk.W, padx=(30, 0), pady=5)
         ttk.Radiobutton(theme_frame, text="Spring Pastels (soft colors)", 
                        variable=self.color_theme, value="Set2").grid(row=2, column=1, sticky=tk.W, padx=(30, 0), pady=5)
+        ttk.Radiobutton(theme_frame, text="Gradient Green (dark to mint)", 
+                       variable=self.color_theme, value="gradient_green").grid(row=3, column=0, sticky=tk.W, pady=5)
         
         # Custom Legend Section
         legend_frame = ttk.LabelFrame(main_frame, text="Custom Legend Labels", padding="15")
@@ -207,10 +209,25 @@ class NMRPlotterGUI:
         help_label = ttk.Label(xlim_frame, text="💡 Tip: Only data within this range will be plotted", 
                               font=("Helvetica", 8, "italic"))
         help_label.grid(row=3, column=0, columnspan=3, sticky=tk.W, padx=(25, 0), pady=(5, 0))
+
+        # Axis Labels Section
+        axis_label_frame = ttk.LabelFrame(main_frame, text="Axis Labels", padding="15")
+        axis_label_frame.grid(row=8, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        axis_label_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(axis_label_frame, text="X-axis label:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10), pady=5)
+        self.x_axis_label_entry = ttk.Entry(axis_label_frame, width=50)
+        self.x_axis_label_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5)
+        self.x_axis_label_entry.insert(0, "ppm")
+
+        ttk.Label(axis_label_frame, text="Y-axis label:").grid(row=1, column=0, sticky=tk.W, padx=(0, 10), pady=5)
+        self.y_axis_label_entry = ttk.Entry(axis_label_frame, width=50)
+        self.y_axis_label_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5)
+        self.y_axis_label_entry.insert(0, "Intensity (a.u.)")
         
         # Plot Button
         plot_button = ttk.Button(main_frame, text="📊 Plot Spectra", command=self.plot_spectra, width=35)
-        plot_button.grid(row=8, column=0, columnspan=3, pady=25)
+        plot_button.grid(row=9, column=0, columnspan=3, pady=25)
         
     def select_files(self):
         # Temporarily unbind wheel events while native dialog is open
@@ -308,6 +325,8 @@ class NMRPlotterGUI:
             quality = self.quality_mode.get()
             plot_mode = self.plot_mode.get()
             color_theme = self.color_theme.get()
+            x_axis_label = self.x_axis_label_entry.get().strip()
+            y_axis_label = self.y_axis_label_entry.get().strip()
             
             # Get custom legend labels if enabled
             custom_labels = None
@@ -370,6 +389,8 @@ class NMRPlotterGUI:
                 custom_labels=custom_labels,
                 quality=quality,
                 sample_amounts_mg=sample_amounts_mg,
+                x_axis_label=x_axis_label,
+                y_axis_label=y_axis_label,
             )
             
         except Exception as e:

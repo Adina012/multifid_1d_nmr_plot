@@ -9,6 +9,7 @@ A Python utility for plotting multiple NMR (Nuclear Magnetic Resonance) spectral
 - Automatic x-axis range extraction from file headers
 - Proper NMR spectral display with reversed x-axis (ppm scale)
 - Scientific notation formatting for intensity values
+- Customizable x-axis and y-axis labels
 - Error handling for malformed files
 - Optimized for large datasets
 
@@ -34,6 +35,7 @@ python main.py
 1. A file dialog will open
 2. Select one or more `.txt` NMR data files
 3. Plots will display in a stacked subplot layout
+4. Enter custom axis labels in the GUI when needed; the defaults are `ppm` and `Intensity (a.u.)`
 
 ## File Format
 

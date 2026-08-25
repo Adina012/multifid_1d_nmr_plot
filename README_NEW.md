@@ -7,6 +7,7 @@ A user-friendly GUI application for plotting 1D NMR spectra with customizable vi
 - 📊 Plot single or multiple NMR spectra
 - 🎨 Purple-themed modern GUI
 - 🔧 Customizable x-axis limits
+- 🏷️ Customizable x- and y-axis labels
 - 📈 Publication quality (300 DPI) or preview mode (100 DPI)
 - 📁 Easy file selection and management
 - 🔄 Plot multiple spectra on same figure or separately
@@ -60,6 +61,7 @@ Parses NMR data files:
    - Choose plot mode (single/multiple)
    - Select quality (publication/preview)
    - Optionally set custom x-axis limits
+   - Optionally enter custom x-axis and y-axis labels
    - Click "Plot Spectra" to generate plots
 
 ## Requirements
