@@ -140,6 +140,10 @@ class NMRPlotterGUI:
                        variable=self.color_theme, value="Set2").grid(row=2, column=1, sticky=tk.W, padx=(30, 0), pady=5)
         ttk.Radiobutton(theme_frame, text="Gradient Green (dark to mint)", 
                        variable=self.color_theme, value="gradient_green").grid(row=3, column=0, sticky=tk.W, pady=5)
+        ttk.Radiobutton(theme_frame, text="Teal-Indigo-Purple-Pink Gradient",
+                       variable=self.color_theme, value="teal_indigo_purple_pink").grid(row=3, column=1,
+                                                  sticky=tk.W,
+                                                  padx=(30, 0), pady=5)
 
         self.show_area_under_curve = tk.BooleanVar(value=False)
         ttk.Checkbutton(theme_frame, text="Shade area under curves",

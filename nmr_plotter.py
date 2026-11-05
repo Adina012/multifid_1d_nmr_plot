@@ -31,6 +31,21 @@ def register_custom_colormaps():
     )
     plt.colormaps.register(gradient_green_cmap)
 
+    teal_indigo_purple_pink_colors = [
+        '#00695c',  # Deep teal
+        '#00897b',  # Teal
+        '#3949ab',  # Indigo
+        '#5e35b1',  # Violet
+        '#6a1b9a',  # Purple
+        '#8e24aa',  # Magenta purple
+        '#ad1457',  # Magenta
+        '#f06292',  # Pink
+    ]
+    teal_indigo_purple_pink_cmap = mcolors.LinearSegmentedColormap.from_list(
+        'teal_indigo_purple_pink', teal_indigo_purple_pink_colors
+    )
+    plt.colormaps.register(teal_indigo_purple_pink_cmap)
+
 
 # Register custom colormaps when module is imported
 register_custom_colormaps()
@@ -131,21 +146,23 @@ def set_plot_quality(quality='publication'):
 def _get_area_color(color):
     """Return a lighter version of a curve color for area shading."""
     curve_rgb = np.asarray(mcolors.to_rgb(color))
-    return tuple(curve_rgb + (1 - curve_rgb) * 0.35)
+    return tuple(curve_rgb + (1 - curve_rgb) * 0.5)
 
 
-def _plot_curve(ax, x_values, y_values, color, show_area_under_curve, **kwargs):
+def _plot_curve(ax, x_values, y_values, color, show_area_under_curve, layer=0, **kwargs):
     """Plot a curve and optionally shade the area between it and zero."""
+    curve_zorder = 3 + (layer * 2)
     if show_area_under_curve:
         ax.fill_between(
             x_values,
             0,
             y_values,
             color=_get_area_color(color),
-            alpha=0.9,
+            alpha=0.5,
             linewidth=0,
+            zorder=curve_zorder,
         )
-    return ax.plot(x_values, y_values, color=color, **kwargs)
+    return ax.plot(x_values, y_values, color=color, zorder=curve_zorder + 1, **kwargs)
 
 
 def plot_nmr_data(
@@ -231,7 +248,7 @@ def plot_nmr_data(
                 label = custom_labels[idx] if custom_labels and idx < len(custom_labels) else filename
                 _plot_curve(
                     ax, x_values, y_values, color, show_area_under_curve,
-                    linewidth=0.8, label=label,
+                    layer=idx, linewidth=0.8, label=label,
                 )
             
             except ValueError as e:
@@ -299,7 +316,7 @@ def plot_nmr_data(
                 # Plot with label for legend
                 _plot_curve(
                     ax, x_values, y_values, color, show_area_under_curve,
-                    linewidth=0.8, label=label,
+                    layer=idx, linewidth=0.8, label=label,
                 )
                 ax.set_ylabel(y_axis_label, fontsize=11)
                 # No subplot title - filenames will appear in legend only

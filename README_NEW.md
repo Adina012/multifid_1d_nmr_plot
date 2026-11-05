@@ -9,6 +9,7 @@ A user-friendly GUI application for plotting 1D NMR spectra with customizable vi
 - 🔧 Customizable x-axis limits
 - 🏷️ Customizable x- and y-axis labels
 - 📈 Publication quality plotting at 300 DPI
+- 🌈 Teal-to-indigo-to-purple-to-pink gradient color scheme
 - 📁 Easy file selection and management
 - 🔄 Plot multiple spectra on same figure or separately
 
