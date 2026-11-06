@@ -10,6 +10,9 @@ A user-friendly GUI application for plotting 1D NMR spectra with customizable vi
 - 🏷️ Customizable x- and y-axis labels
 - 📈 Publication quality plotting at 300 DPI
 - 🌈 Teal-to-indigo-to-purple-to-pink gradient color scheme
+- ∫ Integrated intensity for plotted data or complete raw spectra
+- 📋 Separate integral table with selectable relative-integral reference
+- 🧪 Estimate lithium amount in samples from a liquid salt reference concentration (mol Li/kg) and mass
 - 📁 Easy file selection and management
 - 🔄 Plot multiple spectra on same figure or separately
 

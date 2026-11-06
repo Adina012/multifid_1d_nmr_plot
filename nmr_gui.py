@@ -5,7 +5,7 @@ Provides the graphical user interface for NMR plotting.
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import os
-from nmr_plotter import set_plot_quality, plot_nmr_data
+from nmr_plotter import set_plot_quality, plot_nmr_data, show_integral_table
 
 
 class NMRPlotterGUI:
@@ -149,6 +149,44 @@ class NMRPlotterGUI:
         ttk.Checkbutton(theme_frame, text="Shade area under curves",
                    variable=self.show_area_under_curve).grid(row=4, column=0, columnspan=2,
                                       sticky=tk.W, pady=(8, 0))
+        self.calculate_integrals = tk.BooleanVar(value=False)
+        ttk.Checkbutton(theme_frame, text="Show integrated intensity values",
+                   variable=self.calculate_integrals).grid(row=5, column=0, columnspan=2,
+                                      sticky=tk.W, pady=(4, 0))
+        self.calculate_raw_integrals = tk.BooleanVar(value=False)
+        ttk.Checkbutton(theme_frame, text="Show raw integrated intensity (unfiltered, unnormalized)",
+                   variable=self.calculate_raw_integrals).grid(row=6, column=0, columnspan=2,
+                                      sticky=tk.W, pady=(4, 0))
+        ttk.Label(theme_frame, text="Relative integral reference:").grid(
+            row=7, column=0, sticky=tk.W, pady=(8, 0)
+        )
+        self.reference_file = tk.StringVar()
+        self.reference_file_combo = ttk.Combobox(
+            theme_frame, textvariable=self.reference_file, state="readonly", width=45
+        )
+        self.reference_file_combo.grid(row=7, column=1, sticky=tk.W, padx=(30, 0), pady=(8, 0))
+        ttk.Label(theme_frame, text="Reference salt:").grid(
+            row=8, column=0, sticky=tk.W, pady=(8, 0)
+        )
+        self.reference_salt = tk.StringVar(value="LiCl")
+        self.reference_salt_combo = ttk.Combobox(
+            theme_frame,
+            textvariable=self.reference_salt,
+            values=("LiCl", "LiFSI", "Other"),
+            state="readonly",
+            width=15,
+        )
+        self.reference_salt_combo.grid(row=8, column=1, sticky=tk.W, padx=(30, 0), pady=(8, 0))
+        ttk.Label(theme_frame, text="Reference concentration (mol Li/kg):").grid(
+            row=9, column=0, sticky=tk.W, pady=(4, 0)
+        )
+        self.reference_concentration_entry = ttk.Entry(theme_frame, width=18)
+        self.reference_concentration_entry.grid(row=9, column=1, sticky=tk.W, padx=(30, 0), pady=(4, 0))
+        ttk.Label(theme_frame, text="Reference liquid mass (g):").grid(
+            row=10, column=0, sticky=tk.W, pady=(4, 0)
+        )
+        self.reference_mass_entry = ttk.Entry(theme_frame, width=18)
+        self.reference_mass_entry.grid(row=10, column=1, sticky=tk.W, padx=(30, 0), pady=(4, 0))
         
         # Custom Legend Section
         legend_frame = ttk.LabelFrame(main_frame, text="Custom Legend Labels", padding="15")
@@ -303,6 +341,12 @@ class NMRPlotterGUI:
         
         count = len(self.file_paths)
         self.file_count_label.config(text=f"{count} file(s) selected")
+        file_names = [os.path.basename(path) for path in self.file_paths]
+        self.reference_file_combo["values"] = file_names
+        if file_names and self.reference_file.get() not in file_names:
+            self.reference_file.set(file_names[0])
+        elif not file_names:
+            self.reference_file.set("")
     
     def toggle_limits(self):
         state = "normal" if self.use_custom_limits.get() else "disabled"
@@ -334,10 +378,41 @@ class NMRPlotterGUI:
             plot_mode = self.plot_mode.get()
             color_theme = self.color_theme.get()
             show_area_under_curve = self.show_area_under_curve.get()
+            calculate_integrals = self.calculate_integrals.get()
+            calculate_raw_integrals = self.calculate_raw_integrals.get()
             show_legends = self.show_legends.get()
             use_small_legends = self.use_small_legends.get()
             x_axis_label = self.x_axis_label_entry.get().strip()
             y_axis_label = self.y_axis_label_entry.get().strip()
+            reference_concentration_mol_li_kg = None
+            reference_mass_g = None
+            reference_description = None
+            if calculate_integrals or calculate_raw_integrals:
+                try:
+                    reference_concentration_mol_li_kg = float(
+                        self.reference_concentration_entry.get()
+                    )
+                    reference_mass_g = float(self.reference_mass_entry.get())
+                except ValueError:
+                    messagebox.showerror(
+                        "Invalid Reference",
+                        "Reference concentration and liquid mass must be numeric.",
+                    )
+                    return
+                if (
+                    reference_concentration_mol_li_kg <= 0
+                    or reference_mass_g <= 0
+                ):
+                    messagebox.showerror(
+                        "Invalid Reference",
+                        "Reference concentration and liquid mass must be greater than zero.",
+                    )
+                    return
+                reference_description = (
+                    f"{self.reference_salt.get()}, "
+                    f"{reference_concentration_mol_li_kg:g} mol Li/kg, "
+                    f"{reference_mass_g:g} g"
+                )
             
             # Get custom legend labels if enabled
             custom_labels = None
@@ -392,7 +467,7 @@ class NMRPlotterGUI:
             set_plot_quality(quality)
             
             # Plot (pass quality so plotter can adjust legend sizing)
-            plot_nmr_data(
+            integrated_intensities = plot_nmr_data(
                 self.file_paths,
                 plot_mode,
                 x_limits=x_limits,
@@ -405,7 +480,25 @@ class NMRPlotterGUI:
                 sample_amounts_mg=sample_amounts_mg,
                 x_axis_label=x_axis_label,
                 y_axis_label=y_axis_label,
+                calculate_integrals=calculate_integrals,
+                calculate_raw_integrals=calculate_raw_integrals,
             )
+
+            if calculate_integrals or calculate_raw_integrals:
+                reference_index = self.file_paths.index(
+                    next(
+                        path for path in self.file_paths
+                        if os.path.basename(path) == self.reference_file.get()
+                    )
+                )
+                show_integral_table(
+                    self.file_paths,
+                    integrated_intensities,
+                    reference_index=reference_index,
+                    reference_concentration_mol_li_kg=reference_concentration_mol_li_kg,
+                    reference_mass_g=reference_mass_g,
+                    reference_description=reference_description,
+                )
             
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred:\n{str(e)}")
