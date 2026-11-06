@@ -13,6 +13,9 @@ from PIL import Image
 from nmr_reader import readNMR
 
 
+LITHIUM_ATOMIC_MOLAR_MASS_G_PER_MOL = 6.941
+
+
 # Register custom colormaps
 def register_custom_colormaps():
     """Register custom color schemes for plotting."""
@@ -30,7 +33,8 @@ def register_custom_colormaps():
     gradient_green_cmap = mcolors.LinearSegmentedColormap.from_list(
         'gradient_green', gradient_green_colors
     )
-    plt.colormaps.register(gradient_green_cmap)
+    if "gradient_green" not in plt.colormaps:
+        plt.colormaps.register(gradient_green_cmap)
 
     teal_indigo_purple_pink_colors = [
         '#00695c',  # Deep teal
@@ -45,7 +49,8 @@ def register_custom_colormaps():
     teal_indigo_purple_pink_cmap = mcolors.LinearSegmentedColormap.from_list(
         'teal_indigo_purple_pink', teal_indigo_purple_pink_colors
     )
-    plt.colormaps.register(teal_indigo_purple_pink_cmap)
+    if "teal_indigo_purple_pink" not in plt.colormaps:
+        plt.colormaps.register(teal_indigo_purple_pink_cmap)
 
 
 # Register custom colormaps when module is imported
@@ -130,7 +135,9 @@ def set_plot_quality(quality='publication'):
         plt.rcParams['ytick.minor.width'] = 0.5
     else:  # preview
         plt.rcParams['figure.dpi'] = 100
-        plt.rcParams['savefig.dpi'] = 100
+        # Keep exported images publication quality even when the GUI uses
+        # lightweight preview rendering.
+        plt.rcParams['savefig.dpi'] = 300
         plt.rcParams['font.size'] = 9
         plt.rcParams['font.family'] = 'serif'
         plt.rcParams['axes.labelsize'] = 11
@@ -168,6 +175,8 @@ def _plot_curve(ax, x_values, y_values, color, show_area_under_curve, layer=0, *
 
 def integrate_spectrum(x_values, y_values):
     """Return the signed area under a spectrum, independent of x-axis direction."""
+    x_values = np.asarray(x_values)
+    y_values = np.asarray(y_values)
     if len(x_values) < 2:
         return 0.0
 
@@ -175,19 +184,61 @@ def integrate_spectrum(x_values, y_values):
     return float(np.trapz(y_values[sort_order], x_values[sort_order]))
 
 
+def quantify_integrals(file_paths, sample_amounts_mg=None, normalize=False):
+    """Calculate quantification integrals directly from each raw spectrum."""
+    if normalize and (
+        sample_amounts_mg is None or len(sample_amounts_mg) != len(file_paths)
+    ):
+        raise ValueError("A positive sample mass is required for every file.")
+    integrals = []
+    for index, file_path in enumerate(file_paths):
+        x_values, y_values = readNMR(file_path)
+        integral = integrate_spectrum(x_values, y_values)
+        if normalize:
+            if sample_amounts_mg[index] <= 0:
+                raise ValueError("Sample masses must be greater than zero.")
+            integral /= sample_amounts_mg[index]
+        integrals.append(integral)
+    return integrals
+
+
+def calculate_lithium_amounts(
+    relative_integral,
+    reference_concentration_mol_li_kg,
+    reference_mass_mg,
+    sample_mass_mg=None,
+):
+    """Convert a reference-scaled integral into lithium amounts.
+
+    The reference concentration is explicitly in mol Li/kg, not mol salt/kg.
+    Therefore the salt molecular weight and salt stoichiometry are not used.
+    """
+    reference_mass_kg = reference_mass_mg / 1_000_000
+    reference_moles_li = (
+        reference_concentration_mol_li_kg * reference_mass_kg
+    )
+    lithium_mmol = relative_integral * reference_moles_li * 1000
+    lithium_mg = lithium_mmol * LITHIUM_ATOMIC_MOLAR_MASS_G_PER_MOL
+
+    if sample_mass_mg is None:
+        return lithium_mmol, lithium_mg, None
+    lithium_ug_per_mg = lithium_mg * 1000 / sample_mass_mg
+    return lithium_mmol, lithium_mg, lithium_ug_per_mg
+
+
 def show_integral_table(
     file_paths,
     integrated_intensities,
     reference_index=0,
     reference_concentration_mol_li_kg=None,
-    reference_mass_g=None,
+    reference_mass_mg=None,
+    sample_amounts_mg=None,
     reference_description=None,
+    show=True,
 ):
     """Display integrated intensities and relative values in a table figure."""
-    plotted = integrated_intensities.get("plotted", [])
-    raw = integrated_intensities.get("raw", [])
-    has_plotted = bool(plotted)
-    has_raw = bool(raw)
+    quantification = integrated_intensities.get("quantification", [])
+    has_quantification = bool(quantification)
     row_count = len(file_paths)
 
     def relative_values(values):
@@ -198,18 +249,17 @@ def show_integral_table(
             return [None] * len(values)
         return [value / reference_value for value in values]
 
-    plotted_relative = relative_values(plotted)
-    raw_relative = relative_values(raw)
-    quantification_relative = raw_relative if has_raw else plotted_relative
+    quantification_relative = relative_values(quantification)
     columns = ["File"]
-    if has_plotted:
-        columns.extend(["Integrated intensity", "Relative"])
-    if has_raw:
-        columns.extend(["Raw integral", "Raw relative"])
-    if reference_concentration_mol_li_kg is not None and reference_mass_g is not None:
-        # (mol Li/kg) * (g / 1000) * (1000 mmol/mol) = mmol Li.
-        reference_mmol = reference_concentration_mol_li_kg * reference_mass_g
+    if has_quantification:
+        columns.extend(["Quantification integral", "Relative"])
+    if (
+        reference_concentration_mol_li_kg is not None
+        and reference_mass_mg is not None
+    ):
         columns.extend(["Li amount (mmol)", "Li amount (mg)"])
+        if sample_amounts_mg is not None:
+            columns.append("Li (ug/mg sample)")
 
     rows = []
     file_name_width = 28
@@ -220,22 +270,40 @@ def show_integral_table(
             break_long_words=True,
             break_on_hyphens=False,
         )]
-        if has_plotted:
+        if has_quantification:
             row.extend([
-                f"{plotted[index]:.6g}",
-                "undefined" if plotted_relative[index] is None else f"{plotted_relative[index]:.6g}",
+                f"{quantification[index]:.6g}",
+                "undefined" if quantification_relative[index] is None else f"{quantification_relative[index]:.6g}",
             ])
-        if has_raw:
-            row.extend([
-                f"{raw[index]:.6g}",
-                "undefined" if raw_relative[index] is None else f"{raw_relative[index]:.6g}",
-            ])
-        if reference_concentration_mol_li_kg is not None and reference_mass_g is not None:
+        if (
+            reference_concentration_mol_li_kg is not None
+            and reference_mass_mg is not None
+        ):
             relative_value = quantification_relative[index]
+            lithium_mmol = lithium_mg = lithium_ug_per_mg = None
+            if relative_value is not None:
+                (
+                    lithium_mmol,
+                    lithium_mg,
+                    lithium_ug_per_mg,
+                ) = calculate_lithium_amounts(
+                    relative_value,
+                    reference_concentration_mol_li_kg,
+                    reference_mass_mg,
+                    sample_amounts_mg[index]
+                    if sample_amounts_mg is not None
+                    else None,
+                )
             row.extend([
-                "undefined" if relative_value is None else f"{relative_value * reference_mmol:.6g}",
-                "undefined" if relative_value is None else f"{relative_value * reference_mmol * 6.941:.6g}",
+                "undefined" if lithium_mmol is None else f"{lithium_mmol:.6g}",
+                "undefined" if lithium_mg is None else f"{lithium_mg:.6g}",
             ])
+            if sample_amounts_mg is not None:
+                row.append(
+                    "undefined"
+                    if lithium_ug_per_mg is None
+                    else f"{lithium_ug_per_mg:.6g}"
+                )
         rows.append(row)
 
     column_count = len(columns)
@@ -261,12 +329,14 @@ def show_integral_table(
     table.auto_set_font_size(False)
     table.set_fontsize(max(7, min(10, 11 - column_count * 0.5)))
     table.auto_set_column_width(col=list(range(column_count)))
-    for (row_index, _column_index), cell in table.get_celld().items():
+    for cell in table.get_celld().values():
         cell.set_height(row_height / figure_height)
         cell.get_text().set_wrap(True)
         cell.get_text().set_verticalalignment("center")
     fig.subplots_adjust(left=0.02, right=0.98, top=0.82, bottom=0.05)
-    plt.show()
+    if show:
+        plt.show()
+    return fig
 
 
 def plot_nmr_data(
@@ -282,8 +352,8 @@ def plot_nmr_data(
     show_area_under_curve=False,
     show_legends=True,
     use_small_legends=False,
-    calculate_integrals=False,
-    calculate_raw_integrals=False,
+    show=True,
+    return_figures=False,
 ):
     """
     Plot NMR data according to specified parameters.
@@ -314,20 +384,25 @@ def plot_nmr_data(
         Display legends for plot modes that support them.
     use_small_legends : bool, optional
         Use a smaller legend font.
-    calculate_integrals : bool, optional
-        Calculate and return the integrated intensity for each spectrum.
-    calculate_raw_integrals : bool, optional
-        Calculate and return the integrated intensity from the complete raw
-        spectrum before ppm filtering or sample-amount normalization.
-
     Returns:
     --------
-    dict of str to list of float
-        Integrated intensities in file order, keyed by ``"plotted"`` and
-        ``"raw"``. Each list is empty when its corresponding option is false.
+    list of matplotlib.figure.Figure
+        Figures created for the requested plot mode when ``return_figures`` is
+        true. Otherwise, figures are shown and ``None`` is returned.
     """
+    if not file_paths:
+        raise ValueError("At least one spectrum is required for plotting.")
+    if sample_amounts_mg is not None and len(sample_amounts_mg) != len(file_paths):
+        raise ValueError("A sample mass is required for every plotted spectrum.")
+    if sample_amounts_mg is not None and any(mass <= 0 for mass in sample_amounts_mg):
+        raise ValueError("Sample masses must be greater than zero.")
+    if custom_labels is not None and len(custom_labels) != len(file_paths):
+        raise ValueError("A custom label is required for every plotted spectrum.")
+    if x_limits is not None and x_limits[0] <= x_limits[1]:
+        raise ValueError("x_limits must be provided as (high_ppm, low_ppm).")
+
     num_files = len(file_paths)
-    integrated_intensities = {"plotted": [], "raw": []}
+    figures = []
     formatter = ticker.ScalarFormatter(useMathText=True)
     x_axis_label = x_axis_label.strip() if x_axis_label and x_axis_label.strip() else "ppm"
     y_axis_label = y_axis_label.strip() if y_axis_label and y_axis_label.strip() else "Intensity (a.u.)"
@@ -350,12 +425,6 @@ def plot_nmr_data(
         
         for idx, (color, file_path) in enumerate(zip(colors, file_paths)):
             try:
-                if calculate_raw_integrals:
-                    raw_x_values, raw_y_values = readNMR(file_path)
-                    integrated_intensities["raw"].append(
-                        integrate_spectrum(raw_x_values, raw_y_values)
-                    )
-
                 # Pass x_limits to readNMR so it filters the data
                 x_values, y_values = readNMR(file_path, x_limits=x_limits)
                 
@@ -366,11 +435,6 @@ def plot_nmr_data(
 
                 if sample_amounts_mg is not None and idx < len(sample_amounts_mg):
                     y_values = y_values / sample_amounts_mg[idx]
-
-                if calculate_integrals:
-                    integrated_intensities["plotted"].append(
-                        integrate_spectrum(x_values, y_values)
-                    )
                 
                 filename = os.path.basename(file_path)
                 # Use custom label if provided, otherwise use filename
@@ -409,14 +473,16 @@ def plot_nmr_data(
                 copy_figure_to_clipboard(fig)
         
         fig.canvas.mpl_connect('key_press_event', on_key)
-        plt.show()
+        figures.append(fig)
+        if show:
+            plt.show()
     
     elif plot_mode == "stacked":
         # Stack each file in its own subplot (vertical layout) within one figure
         # Useful to compare spectra aligned vertically while keeping x-axis shared
         if num_files == 0:
             print("No files to plot.")
-            return integrated_intensities
+            return figures if return_figures else None
 
         # Create one subplot per file, share x-axis
         fig, axes = plt.subplots(num_files, 1, sharex=True, figsize=(10, max(3 * num_files, 6)))
@@ -429,12 +495,6 @@ def plot_nmr_data(
 
         for idx, (ax, color, file_path) in enumerate(zip(axes, colors, file_paths)):
             try:
-                if calculate_raw_integrals:
-                    raw_x_values, raw_y_values = readNMR(file_path)
-                    integrated_intensities["raw"].append(
-                        integrate_spectrum(raw_x_values, raw_y_values)
-                    )
-
                 x_values, y_values = readNMR(file_path, x_limits=x_limits)
 
                 # Reverse if needed to ensure decreasing order (NMR standard)
@@ -444,11 +504,6 @@ def plot_nmr_data(
 
                 if sample_amounts_mg is not None and idx < len(sample_amounts_mg):
                     y_values = y_values / sample_amounts_mg[idx]
-
-                if calculate_integrals:
-                    integrated_intensities["plotted"].append(
-                        integrate_spectrum(x_values, y_values)
-                    )
 
                 filename = os.path.basename(file_path)
                 # Use custom label if provided, otherwise use filename
@@ -501,18 +556,14 @@ def plot_nmr_data(
                 copy_figure_to_clipboard(fig)
 
         fig.canvas.mpl_connect('key_press_event', on_key_stack)
-        plt.show()
+        figures.append(fig)
+        if show:
+            plt.show()
     
     else:  # single mode
         # Plot each spectrum in a separate figure
         for idx, file_path in enumerate(file_paths):
             try:
-                if calculate_raw_integrals:
-                    raw_x_values, raw_y_values = readNMR(file_path)
-                    integrated_intensities["raw"].append(
-                        integrate_spectrum(raw_x_values, raw_y_values)
-                    )
-
                 # Pass x_limits to readNMR so it filters the data
                 x_values, y_values = readNMR(file_path, x_limits=x_limits)
                 
@@ -523,11 +574,6 @@ def plot_nmr_data(
 
                 if sample_amounts_mg is not None and idx < len(sample_amounts_mg):
                     y_values = y_values / sample_amounts_mg[idx]
-
-                if calculate_integrals:
-                    integrated_intensities["plotted"].append(
-                        integrate_spectrum(x_values, y_values)
-                    )
                 
                 filename = os.path.basename(file_path)
                 
@@ -560,9 +606,11 @@ def plot_nmr_data(
                         copy_figure_to_clipboard(fig)
                 
                 fig.canvas.mpl_connect('key_press_event', on_key)
-                plt.show()
+                figures.append(fig)
+                if show:
+                    plt.show()
 
             except ValueError as e:
                 print(f"Warning: {e}")
 
-    return integrated_intensities
+    return figures if return_figures else None

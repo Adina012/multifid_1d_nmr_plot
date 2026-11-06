@@ -11,7 +11,7 @@ from nmr_gui import NMRPlotterGUI
 def main():
     """Launch the NMR Plotter GUI application."""
     root = tk.Tk()
-    app = NMRPlotterGUI(root)
+    NMRPlotterGUI(root)
     root.mainloop()
 
 if __name__ == "__main__":

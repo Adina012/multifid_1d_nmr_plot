@@ -1,61 +1,58 @@
-# NMR Multi-Figure 1D Plot
+# NMR Spectra Plotter
 
-A Python utility for plotting multiple NMR (Nuclear Magnetic Resonance) spectral data files in a single figure with multiple subplots.
+This Tkinter application plots 1D NMR spectra and optionally quantifies
+lithium from raw spectra.
 
 ## Features
 
-- Load and plot multiple NMR data files (.txt format)
-- Interactive file selection via GUI dialog
-- Automatic x-axis range extraction from file headers
-- Proper NMR spectral display with reversed x-axis (ppm scale)
-- Scientific notation formatting for intensity values
-- Customizable x-axis and y-axis labels
-- Error handling for malformed files
-- Optimized for large datasets
+- Plot multiple spectra together, separately, or as stacked subplots.
+- Exclude the selected liquid reference from plotted spectra.
+- Normalize plotted intensity and quantification integrals independently by
+  sample mass.
+- Quantify complete raw spectra using trapezoidal integration.
+- Calculate lithium from a reference concentration entered in **mol Li/kg**.
+- Display lithium as mmol, mg, and `Li (ug/mg sample)`.
+- Show low-resolution previews in the GUI while retaining 300 DPI export
+  settings.
 
 ## Requirements
 
-- Python 3.x
-- NumPy
-- Matplotlib
-- tkinter (usually included with Python)
-
-## Installation
-
-```bash
-pip install numpy matplotlib
+```text
+numpy
+matplotlib
+Pillow
+tkinter
 ```
 
-## Usage
+Install the Python packages with:
+
+```bash
+pip install numpy matplotlib Pillow
+```
+
+## Run
 
 ```bash
 python main.py
 ```
 
-1. A file dialog will open
-2. Select one or more `.txt` NMR data files
-3. Plots will display in a stacked subplot layout
-4. Enter custom axis labels in the GUI when needed; the defaults are `ppm` and `Intensity (a.u.)`
+Select one or more files, enter one sample mass in mg for each file, and
+choose whether to plot and/or quantify them.
 
-## File Format
+The expected file format is:
 
-Expected NMR data file format:
-
-```
-# LEFT = X.XX ppm, RIGHT = Y.YY ppm
-# SIZE = 1234 (points)
+```text
+# LEFT = 200 ppm, RIGHT = -100 ppm
+# SIZE = 1234
 intensity_value_1
 intensity_value_2
 ...
 ```
 
-## Output
+## Lithium units
 
-The script generates a matplotlib figure with:
-- One subplot per selected file
-- Intensity values in scientific notation
-- Properly formatted NMR spectral display
-
-## License
-
-MIT
+The reference mass is converted from mg to kg and multiplied by the entered
+`mol Li/kg` concentration. The resulting lithium moles are converted to mmol,
+then to mg using lithium's atomic molar mass, 6.941 g/mol. The salt molecular
+weight is not applied because the concentration is already expressed as
+lithium, not salt, concentration.

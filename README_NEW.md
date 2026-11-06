@@ -13,6 +13,10 @@ A user-friendly GUI application for plotting 1D NMR spectra with customizable vi
 - ∫ Integrated intensity for plotted data or complete raw spectra
 - 📋 Separate integral table with selectable relative-integral reference
 - 🧪 Estimate lithium amount in samples from a liquid salt reference concentration (mol Li/kg) and mass
+- ⚖️ Report lithium loading as Li (ug/mg sample) using the sample masses entered for each tube
+- ∫ Optionally normalize integral values by sample mass independently of plot normalization
+- ⚖️ Enter one sample mass per selected file before choosing plot or integral normalization
+- 🚫 The selected reference spectrum is excluded from plotted figures but remains in quantification
 - 📁 Easy file selection and management
 - 🔄 Plot multiple spectra on same figure or separately
 
@@ -54,6 +58,25 @@ Parses NMR data files:
 - Error handling for malformed files
 
 ## Usage
+
+### Lithium calculation units
+
+The reference concentration must be entered as **mol Li/kg**. The selected
+reference mass is entered in **mg** with the other sample masses. The
+calculation is:
+
+```text
+reference Li (mmol) = concentration (mol Li/kg)
+                     × reference mass (mg) / 1,000,000 (kg/mg)
+                     × 1,000 (mmol/mol)
+Li (mg) = Li (mmol) × 6.941 g/mol
+Li (ug/mg sample) = Li (mg) × 1,000 / sample mass (mg)
+```
+
+Because the concentration is already expressed as **mol Li/kg**, the selected
+salt name is descriptive only. The molecular weight of LiCl, LiFSI, or another
+salt is not applied; only the atomic molar mass of lithium is used to convert
+Li moles to Li mass.
 
 1. Run the application:
    ```bash

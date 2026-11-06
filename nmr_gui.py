@@ -5,14 +5,24 @@ Provides the graphical user interface for NMR plotting.
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import os
-from nmr_plotter import set_plot_quality, plot_nmr_data, show_integral_table
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from nmr_plotter import (
+    quantify_integrals,
+    set_plot_quality,
+    plot_nmr_data,
+    show_integral_table,
+)
 
 
 class NMRPlotterGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("NMR Spectra Plotter")
-        self.root.geometry("750x700")
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        self.root.geometry(
+            f"{min(1400, screen_width - 40)}x{min(900, screen_height - 80)}"
+        )
         self.root.resizable(True, True)
         
         # Set purple theme colors
@@ -23,6 +33,7 @@ class NMRPlotterGUI:
         self.root.configure(bg=self.bg_color)
         
         self.file_paths = []
+        self.embedded_canvases = []
         self.setup_style()
         self.create_widgets()
 
@@ -41,12 +52,12 @@ class NMRPlotterGUI:
         style.configure('TLabelframe.Label', background=self.bg_color, foreground=self.dark_purple, 
                        font=("Helvetica", 11, "bold"))
         style.configure('TButton', background=self.accent_color, foreground='white', 
-                       font=("Helvetica", 10), padding=8)
+                       font=("Helvetica", 9), padding=4)
         style.map('TButton', background=[('active', self.dark_purple)])
         style.configure('TRadiobutton', background=self.bg_color, foreground=self.dark_purple, 
-                       font=("Helvetica", 10))
+                       font=("Helvetica", 9))
         style.configure('TCheckbutton', background=self.bg_color, foreground=self.dark_purple, 
-                       font=("Helvetica", 10))
+                       font=("Helvetica", 9))
         style.configure('TEntry', fieldbackground='white', foreground=self.dark_purple)
         
     def create_widgets(self):
@@ -71,22 +82,23 @@ class NMRPlotterGUI:
         self.canvas.bind("<Leave>", self._unbind_mousewheel_events)
         
         # Main frame inside scrollable area
-        main_frame = ttk.Frame(self.scrollable_frame, padding="15")
+        main_frame = ttk.Frame(self.scrollable_frame, padding="8")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure grid weights for resizing
         self.scrollable_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
+        main_frame.columnconfigure(3, weight=1)
         
         # Title
         title_label = tk.Label(main_frame, text="NMR Spectra Plotter", 
-                              font=("Helvetica", 18, "bold"),
+                              font=("Helvetica", 15, "bold"),
                               bg=self.bg_color, fg=self.dark_purple)
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 25))
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 8))
         
         # File Selection Section
-        file_frame = ttk.LabelFrame(main_frame, text="File Selection", padding="15")
-        file_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        file_frame = ttk.LabelFrame(main_frame, text="File Selection", padding="6")
+        file_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 6))
         file_frame.columnconfigure(1, weight=1)
         
         ttk.Button(file_frame, text="Select Files (Replace)", command=self.select_files, width=20).grid(row=0, column=0, padx=5, pady=5)
@@ -97,7 +109,7 @@ class NMRPlotterGUI:
         ttk.Button(file_frame, text="Clear Files", command=self.clear_files, width=12).grid(row=0, column=3, padx=5, pady=5)
         
         # File list
-        self.file_listbox = tk.Listbox(file_frame, height=8, width=75, 
+        self.file_listbox = tk.Listbox(file_frame, height=4, width=75,
                                        bg='white', fg=self.dark_purple,
                                        selectbackground=self.accent_color,
                                        font=("Helvetica", 9))
@@ -105,10 +117,23 @@ class NMRPlotterGUI:
         file_scrollbar = ttk.Scrollbar(file_frame, orient="vertical", command=self.file_listbox.yview)
         file_scrollbar.grid(row=1, column=4, sticky=(tk.N, tk.S))
         self.file_listbox.configure(yscrollcommand=file_scrollbar.set)
+
+        ttk.Label(file_frame, text="Sample masses (mg, comma-separated):").grid(
+            row=2, column=0, sticky=tk.W, padx=5, pady=(6, 2)
+        )
+        self.sample_amounts_entry = ttk.Entry(file_frame, width=60)
+        self.sample_amounts_entry.grid(
+            row=2, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=5, pady=(6, 2)
+        )
+        ttk.Label(
+            file_frame,
+            text="Enter one mass per selected file; the selected reference file uses its mass here too.",
+            font=("Helvetica", 8, "italic"),
+        ).grid(row=3, column=0, columnspan=5, sticky=tk.W, padx=5, pady=(0, 3))
         
         # Plot Mode Section
-        mode_frame = ttk.LabelFrame(main_frame, text="Plot Mode", padding="15")
-        mode_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        mode_frame = ttk.LabelFrame(main_frame, text="Plot Mode", padding="6")
+        mode_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 6))
         
         self.plot_mode = tk.StringVar(value="multiple")
         ttk.Radiobutton(mode_frame, text="Multiple spectra on same figure", 
@@ -122,8 +147,8 @@ class NMRPlotterGUI:
         stacked_help.grid(row=3, column=0, sticky=tk.W, pady=(0, 6))
         
         # Color Theme Section
-        theme_frame = ttk.LabelFrame(main_frame, text="Color Theme", padding="15")
-        theme_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        theme_frame = ttk.LabelFrame(main_frame, text="Color Theme", padding="6")
+        theme_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 6))
         
         self.color_theme = tk.StringVar(value="viridis")
         ttk.Radiobutton(theme_frame, text="Viridis (purple-yellow)", 
@@ -150,12 +175,8 @@ class NMRPlotterGUI:
                    variable=self.show_area_under_curve).grid(row=4, column=0, columnspan=2,
                                       sticky=tk.W, pady=(8, 0))
         self.calculate_integrals = tk.BooleanVar(value=False)
-        ttk.Checkbutton(theme_frame, text="Show integrated intensity values",
+        ttk.Checkbutton(theme_frame, text="Quantify from raw spectra",
                    variable=self.calculate_integrals).grid(row=5, column=0, columnspan=2,
-                                      sticky=tk.W, pady=(4, 0))
-        self.calculate_raw_integrals = tk.BooleanVar(value=False)
-        ttk.Checkbutton(theme_frame, text="Show raw integrated intensity (unfiltered, unnormalized)",
-                   variable=self.calculate_raw_integrals).grid(row=6, column=0, columnspan=2,
                                       sticky=tk.W, pady=(4, 0))
         ttk.Label(theme_frame, text="Relative integral reference:").grid(
             row=7, column=0, sticky=tk.W, pady=(8, 0)
@@ -182,15 +203,15 @@ class NMRPlotterGUI:
         )
         self.reference_concentration_entry = ttk.Entry(theme_frame, width=18)
         self.reference_concentration_entry.grid(row=9, column=1, sticky=tk.W, padx=(30, 0), pady=(4, 0))
-        ttk.Label(theme_frame, text="Reference liquid mass (g):").grid(
-            row=10, column=0, sticky=tk.W, pady=(4, 0)
-        )
-        self.reference_mass_entry = ttk.Entry(theme_frame, width=18)
-        self.reference_mass_entry.grid(row=10, column=1, sticky=tk.W, padx=(30, 0), pady=(4, 0))
+        ttk.Label(
+            theme_frame,
+            text="This is lithium concentration; the salt molecular weight is not used.",
+            font=("Helvetica", 8, "italic"),
+        ).grid(row=10, column=0, columnspan=2, sticky=tk.W, padx=(30, 0), pady=(0, 3))
         
         # Custom Legend Section
-        legend_frame = ttk.LabelFrame(main_frame, text="Custom Legend Labels", padding="15")
-        legend_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        legend_frame = ttk.LabelFrame(main_frame, text="Custom Legend Labels", padding="6")
+        legend_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 6))
         
         self.use_custom_legend = tk.BooleanVar(value=False)
         ttk.Checkbutton(legend_frame, text="Use custom labels (leave unchecked for filenames)", 
@@ -215,26 +236,22 @@ class NMRPlotterGUI:
         help_legend.grid(row=3, column=0, columnspan=3, sticky=tk.W, padx=(25, 0), pady=(5, 0))
 
         # Normalization Section
-        norm_frame = ttk.LabelFrame(main_frame, text="Intensity Normalization", padding="15")
-        norm_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        norm_frame = ttk.LabelFrame(main_frame, text="Intensity Normalization", padding="6")
+        norm_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 6))
 
         self.use_normalization = tk.BooleanVar(value=False)
-        ttk.Checkbutton(norm_frame, text="Normalize intensity by sample amount in tube (mg)",
-                variable=self.use_normalization,
-                command=self.toggle_normalization).grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=8)
+        ttk.Checkbutton(norm_frame, text="Normalize intensity and Li result by sample amount (mg)",
+                variable=self.use_normalization).grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=8)
+        self.normalize_integrals = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            norm_frame,
+            text="Normalize integral values by sample amount (mg)",
+            variable=self.normalize_integrals,
+        ).grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=4)
 
-        ttk.Label(norm_frame, text="Amounts (mg, comma-separated):").grid(row=1, column=0, sticky=tk.W, padx=(25, 10), pady=8)
-        self.sample_amounts_entry = ttk.Entry(norm_frame, width=60, state="disabled")
-        self.sample_amounts_entry.grid(row=1, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=8)
-
-        help_norm = ttk.Label(norm_frame,
-                      text="💡 Tip: Enter one positive value per file in mg, e.g., '2.5, 3.0, 1.8'",
-                      font=("Helvetica", 8, "italic"))
-        help_norm.grid(row=2, column=0, columnspan=3, sticky=tk.W, padx=(25, 0), pady=(5, 0))
-        
         # X-Axis Limits Section
-        xlim_frame = ttk.LabelFrame(main_frame, text="X-Axis Limits (ppm) - Zoom to Region", padding="15")
-        xlim_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        xlim_frame = ttk.LabelFrame(main_frame, text="X-Axis Limits (ppm) - Zoom to Region", padding="6")
+        xlim_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 6))
         
         self.use_custom_limits = tk.BooleanVar(value=False)
         ttk.Checkbutton(xlim_frame, text="Enable zoom (only plot selected region)", 
@@ -257,8 +274,8 @@ class NMRPlotterGUI:
         help_label.grid(row=3, column=0, columnspan=3, sticky=tk.W, padx=(25, 0), pady=(5, 0))
 
         # Axis Labels Section
-        axis_label_frame = ttk.LabelFrame(main_frame, text="Axis Labels", padding="15")
-        axis_label_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15))
+        axis_label_frame = ttk.LabelFrame(main_frame, text="Axis Labels", padding="6")
+        axis_label_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 6))
         axis_label_frame.columnconfigure(1, weight=1)
 
         ttk.Label(axis_label_frame, text="X-axis label:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10), pady=5)
@@ -273,7 +290,16 @@ class NMRPlotterGUI:
         
         # Plot Button
         plot_button = ttk.Button(main_frame, text="📊 Plot Spectra", command=self.plot_spectra, width=35)
-        plot_button.grid(row=8, column=0, columnspan=3, pady=25)
+        plot_button.grid(row=8, column=0, columnspan=3, pady=10)
+
+        self.results_frame = ttk.LabelFrame(
+            main_frame, text="Results", padding="10"
+        )
+        self.results_frame.grid(
+            row=0, column=3, rowspan=10, sticky=(tk.N, tk.S, tk.E, tk.W),
+            padx=(12, 0), pady=(0, 6)
+        )
+        self.results_frame.columnconfigure(0, weight=1)
         
     def select_files(self):
         # Temporarily unbind wheel events while native dialog is open
@@ -302,6 +328,7 @@ class NMRPlotterGUI:
             self.update_file_list()
 
     def _on_frame_configure(self, _event):
+        del _event
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def _on_canvas_configure(self, event):
@@ -311,24 +338,44 @@ class NMRPlotterGUI:
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def _on_mousewheel_linux_up(self, _event):
+        del _event
         self.canvas.yview_scroll(-1, "units")
 
     def _on_mousewheel_linux_down(self, _event):
+        del _event
         self.canvas.yview_scroll(1, "units")
 
-    def _bind_mousewheel_events(self, _event=None):
+    def _bind_mousewheel_events(self, *_args):
+        del _args
         self.root.bind_all("<MouseWheel>", self._on_mousewheel)
         self.root.bind_all("<Button-4>", self._on_mousewheel_linux_up)
         self.root.bind_all("<Button-5>", self._on_mousewheel_linux_down)
 
-    def _unbind_mousewheel_events(self, _event=None):
+    def _unbind_mousewheel_events(self, *_args):
+        del _args
         self.root.unbind_all("<MouseWheel>")
         self.root.unbind_all("<Button-4>")
         self.root.unbind_all("<Button-5>")
 
     def on_close(self):
         self._unbind_mousewheel_events()
+        self._clear_results()
         self.root.destroy()
+
+    def _clear_results(self):
+        for canvas in self.embedded_canvases:
+            canvas.get_tk_widget().destroy()
+            canvas.figure.clear()
+        self.embedded_canvases.clear()
+
+    def _display_figure(self, figure):
+        width, height = figure.get_size_inches()
+        scale = min(6.0 / width, 2.8 / height, 1.0)
+        figure.set_size_inches(width * scale, height * scale, forward=True)
+        canvas = FigureCanvasTkAgg(figure, master=self.results_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        self.embedded_canvases.append(canvas)
     
     def clear_files(self):
         self.file_paths = []
@@ -347,6 +394,7 @@ class NMRPlotterGUI:
             self.reference_file.set(file_names[0])
         elif not file_names:
             self.reference_file.set("")
+
     
     def toggle_limits(self):
         state = "normal" if self.use_custom_limits.get() else "disabled"
@@ -357,15 +405,14 @@ class NMRPlotterGUI:
         state = "normal" if self.use_custom_legend.get() else "disabled"
         self.legend_entry.config(state=state)
 
-    def toggle_normalization(self):
-        state = "normal" if self.use_normalization.get() else "disabled"
-        self.sample_amounts_entry.config(state=state)
-
     def _parse_csv_strings(self, raw_text):
         return [value.strip() for value in raw_text.split(',') if value.strip()]
 
     def _parse_csv_floats(self, raw_text):
-        return [float(value.strip()) for value in raw_text.split(',') if value.strip()]
+        values = [float(value.strip()) for value in raw_text.split(",") if value.strip()]
+        if any(value != value or value in (float("inf"), float("-inf")) for value in values):
+            raise ValueError("Values must be finite numbers.")
+        return values
 
     def plot_spectra(self):
         if not self.file_paths:
@@ -374,45 +421,29 @@ class NMRPlotterGUI:
         
         try:
             # Get settings
-            quality = "publication"
+            quality = "preview"
             plot_mode = self.plot_mode.get()
             color_theme = self.color_theme.get()
             show_area_under_curve = self.show_area_under_curve.get()
             calculate_integrals = self.calculate_integrals.get()
-            calculate_raw_integrals = self.calculate_raw_integrals.get()
             show_legends = self.show_legends.get()
             use_small_legends = self.use_small_legends.get()
             x_axis_label = self.x_axis_label_entry.get().strip()
             y_axis_label = self.y_axis_label_entry.get().strip()
             reference_concentration_mol_li_kg = None
-            reference_mass_g = None
+            reference_mass_mg = None
             reference_description = None
-            if calculate_integrals or calculate_raw_integrals:
-                try:
-                    reference_concentration_mol_li_kg = float(
-                        self.reference_concentration_entry.get()
-                    )
-                    reference_mass_g = float(self.reference_mass_entry.get())
-                except ValueError:
-                    messagebox.showerror(
-                        "Invalid Reference",
-                        "Reference concentration and liquid mass must be numeric.",
-                    )
-                    return
-                if (
-                    reference_concentration_mol_li_kg <= 0
-                    or reference_mass_g <= 0
-                ):
-                    messagebox.showerror(
-                        "Invalid Reference",
-                        "Reference concentration and liquid mass must be greater than zero.",
-                    )
-                    return
-                reference_description = (
-                    f"{self.reference_salt.get()}, "
-                    f"{reference_concentration_mol_li_kg:g} mol Li/kg, "
-                    f"{reference_mass_g:g} g"
-                )
+            reference_path = next(
+                (
+                    path for path in self.file_paths
+                    if os.path.basename(path) == self.reference_file.get()
+                ),
+                None,
+            )
+            if reference_path is None:
+                messagebox.showerror("Invalid Reference", "Please select a reference file.")
+                return
+            reference_index = self.file_paths.index(reference_path)
             
             # Get custom legend labels if enabled
             custom_labels = None
@@ -429,10 +460,17 @@ class NMRPlotterGUI:
 
             # Get normalization amounts if enabled
             sample_amounts_mg = None
-            if self.use_normalization.get():
+            if (
+                self.use_normalization.get()
+                or self.normalize_integrals.get()
+                or calculate_integrals
+            ):
                 amounts_text = self.sample_amounts_entry.get().strip()
                 if not amounts_text:
-                    messagebox.showerror("Missing Input", "Please enter sample amounts in mg for all files.")
+                    messagebox.showerror(
+                        "Missing Sample Masses",
+                        "Please enter one sample mass in mg for every selected file.",
+                    )
                     return
 
                 try:
@@ -451,13 +489,38 @@ class NMRPlotterGUI:
                 if any(value <= 0 for value in sample_amounts_mg):
                     messagebox.showerror("Invalid Input", "All sample amounts must be greater than 0 mg.")
                     return
-            
+
+            if calculate_integrals:
+                try:
+                    reference_concentration_mol_li_kg = float(
+                        self.reference_concentration_entry.get()
+                    )
+                except ValueError:
+                    messagebox.showerror(
+                        "Invalid Reference",
+                        "Reference concentration must be numeric.",
+                    )
+                    return
+                if reference_concentration_mol_li_kg <= 0:
+                    messagebox.showerror(
+                        "Invalid Reference",
+                        "Reference concentration must be greater than zero.",
+                    )
+                    return
+                reference_mass_mg = sample_amounts_mg[reference_index]
+                reference_description = (
+                    f"{self.reference_salt.get()}, "
+                    f"{reference_concentration_mol_li_kg:g} mol Li/kg, "
+                    f"{reference_mass_mg:g} mg"
+                )
             # Get x-axis limits if enabled
             x_limits = None
             if self.use_custom_limits.get():
                 try:
                     x_max = float(self.x_max_entry.get())
                     x_min = float(self.x_min_entry.get())
+                    if not (x_max > x_min):
+                        raise ValueError
                     x_limits = (x_max, x_min)
                 except ValueError:
                     messagebox.showerror("Invalid Input", "Please enter valid numbers for x-axis limits.")
@@ -465,40 +528,74 @@ class NMRPlotterGUI:
             
             # Set plot quality
             set_plot_quality(quality)
+
+            plot_file_paths = [
+                path for path in self.file_paths if path != reference_path
+            ]
+            if not plot_file_paths:
+                messagebox.showwarning(
+                    "No Spectra to Plot",
+                    "The reference file is used for quantification and is not plotted.",
+                )
+                if not calculate_integrals:
+                    return
+            plot_labels = (
+                [
+                    label for index, label in enumerate(custom_labels)
+                    if self.file_paths[index] != reference_path
+                ]
+                if custom_labels is not None
+                else None
+            )
+            plot_sample_amounts_mg = (
+                [
+                    amount for index, amount in enumerate(sample_amounts_mg)
+                    if self.file_paths[index] != reference_path
+                ]
+                if sample_amounts_mg is not None
+                else None
+            )
             
             # Plot (pass quality so plotter can adjust legend sizing)
-            integrated_intensities = plot_nmr_data(
-                self.file_paths,
-                plot_mode,
-                x_limits=x_limits,
-                color_theme=color_theme,
-                show_area_under_curve=show_area_under_curve,
-                show_legends=show_legends,
-                use_small_legends=use_small_legends,
-                custom_labels=custom_labels,
-                quality=quality,
-                sample_amounts_mg=sample_amounts_mg,
-                x_axis_label=x_axis_label,
-                y_axis_label=y_axis_label,
-                calculate_integrals=calculate_integrals,
-                calculate_raw_integrals=calculate_raw_integrals,
-            )
-
-            if calculate_integrals or calculate_raw_integrals:
-                reference_index = self.file_paths.index(
-                    next(
-                        path for path in self.file_paths
-                        if os.path.basename(path) == self.reference_file.get()
-                    )
+            # The reference remains in quantification but is never sent to plotting.
+            self._clear_results()
+            if plot_file_paths:
+                plot_figures = plot_nmr_data(
+                    plot_file_paths,
+                    plot_mode,
+                    x_limits=x_limits,
+                    color_theme=color_theme,
+                    show_area_under_curve=show_area_under_curve,
+                    show_legends=show_legends,
+                    use_small_legends=use_small_legends,
+                    custom_labels=plot_labels,
+                    quality=quality,
+                    sample_amounts_mg=plot_sample_amounts_mg,
+                    x_axis_label=x_axis_label,
+                    y_axis_label=y_axis_label,
+                    show=False,
+                    return_figures=True,
                 )
-                show_integral_table(
+                for figure in plot_figures:
+                    self._display_figure(figure)
+
+            if calculate_integrals:
+                quantification_integrals = quantify_integrals(
                     self.file_paths,
-                    integrated_intensities,
+                    sample_amounts_mg=sample_amounts_mg,
+                    normalize=self.normalize_integrals.get(),
+                )
+                table_figure = show_integral_table(
+                    self.file_paths,
+                    {"quantification": quantification_integrals},
                     reference_index=reference_index,
                     reference_concentration_mol_li_kg=reference_concentration_mol_li_kg,
-                    reference_mass_g=reference_mass_g,
+                    reference_mass_mg=reference_mass_mg,
+                    sample_amounts_mg=sample_amounts_mg,
                     reference_description=reference_description,
+                    show=False,
                 )
+                self._display_figure(table_figure)
             
-        except Exception as e:
+        except (OSError, RuntimeError, TypeError, ValueError) as e:
             messagebox.showerror("Error", f"An error occurred:\n{str(e)}")
